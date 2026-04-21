@@ -3051,18 +3051,30 @@ const handleExportCSV = () => {
                         const milestones = {};
                         
                         for (const month of [3, 6, 9, 12]) {
-                          const targetDay = month * 30;
-                          const dataPoint = analysisResult.simulationData.find(d => d.dayIndex === targetDay) || 
-                                           analysisResult.simulationData[Math.min(targetDay, analysisResult.simulationData.length - 1)];
-                          
-                          if (dataPoint) {
-                            const supportValue = dataPoint.supportScenario;
-                            const growth = ((supportValue - currentSales) / currentSales) * 100;
+                          const monthStart = (month - 1) * 30 + 1;
+                          const monthEnd = month * 30;
+                          const monthData = analysisResult.simulationData.filter(
+                            d => d.dayIndex >= monthStart && d.dayIndex <= monthEnd
+                          );
+
+                          if (monthData.length > 0) {
+                            const avgSales = monthData.reduce((sum, d) => sum + d.supportScenario, 0) / monthData.length;
+                            const prevMonthEnd = (month - 1) * 30;
+                            const prevMonthStart = prevMonthEnd - 29;
+                            const prevData = month === 3
+                              ? null
+                              : analysisResult.simulationData.filter(
+                                  d => d.dayIndex >= prevMonthStart && d.dayIndex <= prevMonthEnd
+                                );
+                            const prevAvg = prevData && prevData.length > 0
+                              ? prevData.reduce((sum, d) => sum + d.supportScenario, 0) / prevData.length
+                              : currentSales;
+                            const growth = ((avgSales - prevAvg) / prevAvg) * 100;
                             milestones[month] = {
-                              sales: supportValue,
-                              growth: growth,
-                              dateStr: dataPoint.dateStr,
-                              dayIndex: dataPoint.dayIndex
+                              sales: Math.round(avgSales),
+                              growth,
+                              dateStr: `${month}ヶ月目`,
+                              dayIndex: monthEnd
                             };
                           }
                         }
@@ -3102,7 +3114,7 @@ const handleExportCSV = () => {
                                 }`}>
                                   {milestone.growth > 0 ? '+' : ''}{milestone.growth.toFixed(1)}%
                                 </span>
-                                <span className="text-xs font-bold text-slate-400">前月比</span>
+                                <span className="text-xs font-bold text-slate-400">{month === 3 ? '現状比' : '前月比'}</span>
                               </div>
                               
                               {isTarget && (
