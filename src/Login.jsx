@@ -55,7 +55,7 @@ export default function Login({ onLogin }) {
         setStep('otp');
       } catch (err) {
         console.error(err);
-        setError('SMS送信に失敗しました。Firebaseの設定を確認してください。');
+        setError('SMS送信エラー: ' + (err.code || err.message));
         // recaptchaをリセット
         if (recaptchaVerifierRef.current) {
           recaptchaVerifierRef.current.clear();
