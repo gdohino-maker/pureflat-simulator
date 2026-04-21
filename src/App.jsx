@@ -1814,7 +1814,7 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (loginPass === 'pureflat1234') {
+    if (loginPass === 'pf123456') {
       setIsLoggedIn(true);
       setActiveTab('simulate');
       setLoginError('');
