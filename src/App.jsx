@@ -343,7 +343,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     gradStart:  '53BEB1',
     gradEnd:    '3DAA9D',
   };
-  const fontJP = 'Yu Gothic';
+  const fontJP = 'Noto Sans CJK JP';
   const fontEN = 'Arial';
 
   const companyName = formData.companyName || '対象店舗';
@@ -385,28 +385,35 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     if (num) {
       slide.addText(`${num}`, {
         x: 9.3, y: 5.32, w: 0.5, h: 0.2,
-        fontSize: 9, fontFace: fontEN, color: C.slateLight, bold: false, align: 'right', margin: 0
+        fontSize: 13, fontFace: fontEN, color: C.slateLight, bold: false, align: 'right', margin: 0
       });
     }
   };
 
-  // ── ヘルパー：コンテンツヘッダー（資料ベース.slide2 準拠 / 左上ウェーブ上に白色タイトル）──
+  // ── ヘルパー：コンテンツヘッダー（32pt タイトル）──
   const addSlideHeader = (slide, num, title, subtitle) => {
     addContentBase(slide);
-    // タイトル：濃いティール波の上に白で配置（資料ベース.slide2 のテキスト位置 x=0.58", y=0.67" 相当）
     slide.addText(title, {
-      x: 0.58, y: 0.12, w: 7.0, h: 0.48,
-      fontSize: 20, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0
+      x: 0.45, y: 0.04, w: 8.8, h: 0.62,
+      fontSize: 32, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0
     });
-    // サブタイトル：波の中（下部ライトティール領域）に黒で小さく配置
-    if (subtitle) {
-      slide.addText(subtitle, {
-        x: 0.58, y: 0.6, w: 7.2, h: 0.28,
-        fontSize: 9, fontFace: fontJP, color: C.dark, bold: true, margin: 0
-      });
-    }
-    // ページ番号（右下）
     if (num) addFooter(slide, num);
+  };
+
+  // ── ヘルパー：スライドサマリー（タイトル直下・16pt）──
+  const addSlideSummary = (slide, text) => {
+    slide.addShape(pres.shapes.RECTANGLE, {
+      x: 0.3, y: 0.70, w: 9.4, h: 0.50,
+      fill: { color: C.tealBg }, line: { color: C.teal, width: 1 }, rectRadius: 0.08
+    });
+    slide.addShape(pres.shapes.RECTANGLE, {
+      x: 0.3, y: 0.70, w: 0.10, h: 0.50,
+      fill: { color: C.teal }, line: { color: C.teal }
+    });
+    slide.addText(text, {
+      x: 0.50, y: 0.71, w: 9.05, h: 0.48,
+      fontSize: 16, fontFace: fontJP, color: C.tealDark, bold: false, margin: 4, align: 'left', valign: 'middle'
+    });
   };
 
   // ── ヘルパー：セクションバッジ ──
@@ -417,7 +424,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     slide.addText(text, {
       x: x + 0.05, y: y + 0.02, w: text.length * 0.13 + 0.3, h: 0.26,
-      fontSize: 9, fontFace: fontJP, color: textColor, bold: true, align: 'center', margin: 0
+      fontSize: 13, fontFace: fontJP, color: textColor, bold: true, align: 'center', margin: 0
     });
   };
 
@@ -437,7 +444,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     }
     slide.addText(label, {
       x: x + 0.15, y: y + 0.15, w: w - 0.3, h: 0.25,
-      fontSize: 9, fontFace: fontJP, color: C.slateLight, bold: true, margin: 0
+      fontSize: 13, fontFace: fontJP, color: C.slateLight, bold: true, margin: 0
     });
     slide.addText(value, {
       x: x + 0.1, y: y + 0.38, w: w - 0.2, h: 0.55,
@@ -493,7 +500,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s1.addText('1年後目標月商', {
     x: 0.85, y: 4.18, w: 2.5, h: 0.26,
-    fontSize: 9, fontFace: fontJP, color: C.tealLight, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, color: C.tealLight, bold: true, margin: 0
   });
   s1.addText(formatCurrency(finalSales), {
     x: 0.85, y: 4.43, w: 2.5, h: 0.52,
@@ -506,7 +513,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s1.addText('現状比', {
     x: 3.75, y: 4.18, w: 1.65, h: 0.26,
-    fontSize: 9, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
   });
   s1.addText(`+${growthRate}%`, {
     x: 3.75, y: 4.43, w: 1.65, h: 0.52,
@@ -521,14 +528,15 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s2 = pres.addSlide();
   s2.background = { color: C.white };
   addSlideHeader(s2, 1, '貴社・商品の現状サマリー', `${companyName} / ${genreName}`);
+  addSlideSummary(s2, `貴社の現状月商・評価スコア・商品概要を整理しました。この現状把握を起点に、具体的な改善施策と売上目標を設計します。`);
 
   // 左カラム：商品情報
   s2.addShape(pres.shapes.RECTANGLE, {
-    x: 0.3, y: 1.15, w: 4.7, h: 4.15,
+    x: 0.3, y: 1.28, w: 4.7, h: 4.02,
     fill: { color: C.slateBg }, line: { color: C.tealLight, width: 1 }, rectRadius: 0.15
   });
   s2.addShape(pres.shapes.RECTANGLE, {
-    x: 0.3, y: 1.15, w: 4.7, h: 0.5,
+    x: 0.3, y: 1.28, w: 4.7, h: 0.5,
     fill: { color: C.tealDark }, line: { color: C.tealDark }, rectRadius: 0.15
   });
   s2.addText('🏪  企業・商品情報', {
@@ -554,23 +562,23 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s2.addText(row.lbl, {
       x: 0.5, y: ry + 0.08, w: 1.4, h: 0.28,
-      fontSize: 9.5, fontFace: fontJP, color: C.slateLight, bold: true, margin: 0
+      fontSize: 11.5, fontFace: fontJP, color: C.slateLight, bold: true, margin: 0
     });
     s2.addText(row.val, {
       x: 1.95, y: ry + 0.05, w: 2.85, h: 0.34,
-      fontSize: 11, fontFace: fontJP, color: C.dark, bold: true, margin: 0
+      fontSize: 13, fontFace: fontJP, color: C.dark, bold: true, margin: 0
     });
   });
 
   // 右カラム：評価スコア視覚化 + 商品概要
   s2.addShape(pres.shapes.RECTANGLE, {
-    x: 5.2, y: 1.15, w: 4.5, h: 1.6,
+    x: 5.2, y: 1.28, w: 4.5, h: 1.6,
     fill: { color: C.amberBg }, line: { color: C.amber, width: 1.5 }, rectRadius: 0.15
   });
   const ratingVal = parseFloat(qd.averageRating) || 0;
   s2.addText('⭐ 平均評価スコア', {
-    x: 5.4, y: 1.25, w: 4.1, h: 0.28,
-    fontSize: 11, fontFace: fontJP, color: C.amber, bold: true, margin: 0
+    x: 5.4, y: 1.38, w: 4.1, h: 0.28,
+    fontSize: 13, fontFace: fontJP, color: C.amber, bold: true, margin: 0
   });
   s2.addText(`${ratingVal > 0 ? ratingVal.toFixed(2) : '—'}`, {
     x: 5.4, y: 1.55, w: 1.8, h: 0.6,
@@ -586,7 +594,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   }
   s2.addText(`/ 5.00  レビュー${qd.reviews || '0'}`, {
     x: 5.4, y: 2.08, w: 4.1, h: 0.25,
-    fontSize: 9, fontFace: fontJP, color: C.slateLight, margin: 0
+    fontSize: 13, fontFace: fontJP, color: C.slateLight, margin: 0
   });
 
   s2.addShape(pres.shapes.RECTANGLE, {
@@ -595,7 +603,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s2.addText('📋  商品・ページ概要', {
     x: 5.4, y: 3.0, w: 4.1, h: 0.28,
-    fontSize: 11, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
   });
   s2.addText(analysisResult.productInfo || '商品情報の詳細', {
     x: 5.4, y: 3.32, w: 4.1, h: 1.85,
@@ -609,21 +617,22 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s3 = pres.addSlide();
   s3.background = { color: C.white };
   addSlideHeader(s3, 2, '現状分析　強み ／ 改善点', 'AIが商品ページを解析し、数値根拠に基づいて抽出');
+  addSlideSummary(s3, 'AIが商品ページを解析し、守るべき強みと優先対処が必要な改善点を数値根拠とともに抽出しました。左列の強みを伸ばしながら右列の改善点を解消することが、売上向上の最短経路です。');
 
   const goodPoints = analysisResult.currentStatus?.good || [];
   const badPoints  = analysisResult.currentStatus?.bad  || [];
 
   // 強みカラム
   s3.addShape(pres.shapes.RECTANGLE, {
-    x: 0.3, y: 1.15, w: 4.6, h: 4.15,
+    x: 0.3, y: 1.28, w: 4.6, h: 4.02,
     fill: { color: C.emeraldBg }, line: { color: C.emerald, width: 2 }, rectRadius: 0.15
   });
   s3.addShape(pres.shapes.RECTANGLE, {
-    x: 0.3, y: 1.15, w: 4.6, h: 0.55,
+    x: 0.3, y: 1.28, w: 4.6, h: 0.55,
     fill: { color: C.emerald }, line: { color: C.emerald }, rectRadius: 0.15
   });
   s3.addText('✅  強み（数値根拠）', {
-    x: 0.5, y: 1.22, w: 4.2, h: 0.38,
+    x: 0.5, y: 1.35, w: 4.2, h: 0.38,
     fontSize: 14, fontFace: fontJP, color: C.white, bold: true, margin: 0
   });
   goodPoints.slice(0, 4).forEach((pt, i) => {
@@ -642,21 +651,21 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s3.addText(pt, {
       x: 1.05, y: py + 0.08, w: 3.65, h: 0.58,
-      fontSize: 9.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
+      fontSize: 11.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
     });
   });
 
   // 弱みカラム
   s3.addShape(pres.shapes.RECTANGLE, {
-    x: 5.1, y: 1.15, w: 4.6, h: 4.15,
+    x: 5.1, y: 1.28, w: 4.6, h: 4.02,
     fill: { color: C.roseBg }, line: { color: C.rose, width: 2 }, rectRadius: 0.15
   });
   s3.addShape(pres.shapes.RECTANGLE, {
-    x: 5.1, y: 1.15, w: 4.6, h: 0.55,
+    x: 5.1, y: 1.28, w: 4.6, h: 0.55,
     fill: { color: C.rose }, line: { color: C.rose }, rectRadius: 0.15
   });
   s3.addText('⚠️  改善点（優先課題）', {
-    x: 5.3, y: 1.22, w: 4.2, h: 0.38,
+    x: 5.3, y: 1.35, w: 4.2, h: 0.38,
     fontSize: 14, fontFace: fontJP, color: C.white, bold: true, margin: 0
   });
   badPoints.slice(0, 4).forEach((pt, i) => {
@@ -675,7 +684,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s3.addText(pt, {
       x: 5.85, y: py + 0.08, w: 3.65, h: 0.58,
-      fontSize: 9.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
+      fontSize: 11.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
     });
   });
   addFooter(s3, 2);
@@ -690,20 +699,20 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   // ジャンル洞察テキスト
   const genreAnalysis = getGenreInsight(genreName);
   s4.addShape(pres.shapes.RECTANGLE, {
-    x: 0.3, y: 1.15, w: 9.4, h: 1.9,
+    x: 0.3, y: 1.28, w: 9.4, h: 1.77,
     fill: { color: C.tealBg }, line: { color: C.teal, width: 1.5 }, rectRadius: 0.15
   });
   s4.addShape(pres.shapes.RECTANGLE, {
-    x: 0.3, y: 1.15, w: 0.1, h: 1.9,
+    x: 0.3, y: 1.28, w: 0.1, h: 1.77,
     fill: { color: C.teal }, line: { color: C.teal }
   });
   s4.addText(`弊社の${genreName}支援実績からの洞察`, {
-    x: 0.6, y: 1.22, w: 9, h: 0.3,
-    fontSize: 11, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
+    x: 0.6, y: 1.35, w: 9, h: 0.3,
+    fontSize: 13, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
   });
   s4.addText(genreAnalysis, {
     x: 0.55, y: 1.52, w: 9.0, h: 1.4,
-    fontSize: 10.5, fontFace: fontJP, color: C.dark, margin: 3, align: 'left', valign: 'top'
+    fontSize: 12, fontFace: fontJP, color: C.dark, margin: 3, align: 'left', valign: 'top'
   });
 
   // 楽天セールカレンダー
@@ -713,7 +722,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s4.addText('📅  楽天市場 主要セールカレンダー（年間活用すべき重要イベント）', {
     x: 0.5, y: 3.22, w: 9, h: 0.28,
-    fontSize: 11, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
   });
 
   const saleMonths = [
@@ -744,7 +753,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s4.addText(ev.mon, {
       x: ex + 0.05, y: ey + 0.02, w: 0.7, h: 0.24,
-      fontSize: 11, fontFace: fontEN, color: C.white, bold: true, align: 'center', margin: 0
+      fontSize: 13, fontFace: fontEN, color: C.white, bold: true, align: 'center', margin: 0
     });
     s4.addText(ev.name, {
       x: ex + 0.08, y: ey + 0.32, w: 1.62, h: 0.42,
@@ -759,10 +768,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s5 = pres.addSlide();
   s5.background = { color: C.white };
   addSlideHeader(s5, 4, '抽出された課題', 'アクセス数不足 ／ 転換率（CVR）低下の2軸で整理');
+  addSlideSummary(s5, 'ページ解析の結果、①アクセス数不足と②転換率（CVR）低下の2軸が主要課題として浮かび上がりました。この2点を解消することが売上V字回復への最短経路です。');
 
   // 中央フロー矢印
   s5.addShape(pres.shapes.RECTANGLE, {
-    x: 4.72, y: 1.25, w: 0.56, h: 4.05,
+    x: 4.72, y: 1.38, w: 0.56, h: 3.92,
     fill: { color: C.slateBg }, line: { color: C.slateBg }
   });
   s5.addText('課\n題\n整\n理', {
@@ -772,11 +782,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
 
   // ── アクセス課題（左列）──
   s5.addShape(pres.shapes.RECTANGLE, {
-    x: 0.3, y: 1.15, w: 4.3, h: 0.44,
+    x: 0.3, y: 1.28, w: 4.3, h: 0.44,
     fill: { color: C.blue }, line: { color: C.blue }, rectRadius: 0.08
   });
   s5.addText('📊  アクセス数不足の課題', {
-    x: 0.45, y: 1.18, w: 4.0, h: 0.35,
+    x: 0.45, y: 1.31, w: 4.0, h: 0.35,
     fontSize: 12, fontFace: fontJP, color: C.white, bold: true, margin: 0
   });
 
@@ -801,17 +811,17 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s5.addText(issue, {
       x: 1.0, y: iy + 0.08, w: 3.52, h: 0.86,
-      fontSize: 9.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
+      fontSize: 11.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
     });
   });
 
   // ── CVR課題（右列）──
   s5.addShape(pres.shapes.RECTANGLE, {
-    x: 5.4, y: 1.15, w: 4.3, h: 0.44,
+    x: 5.4, y: 1.28, w: 4.3, h: 0.44,
     fill: { color: C.rose }, line: { color: C.rose }, rectRadius: 0.08
   });
   s5.addText('🔄  転換率（CVR）低下の課題', {
-    x: 5.55, y: 1.18, w: 4.0, h: 0.35,
+    x: 5.55, y: 1.31, w: 4.0, h: 0.35,
     fontSize: 12, fontFace: fontJP, color: C.white, bold: true, margin: 0
   });
 
@@ -844,7 +854,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s5.addText(issue, {
       x: 6.1, y: iy + 0.08, w: 3.52, h: 0.86,
-      fontSize: 9.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
+      fontSize: 11.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
     });
   });
   addFooter(s5, 4);
@@ -855,6 +865,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s6 = pres.addSlide();
   s6.background = { color: C.white };
   addSlideHeader(s6, 5, 'アクセス数の増加（舟瀬式）', '楽天絞込ハック／Yahoo!優良配送／CTR特化／AIEO×外部流入');
+  addSlideSummary(s6, '弊社独自の舟瀬式メソッドでアクセス数を最大化します。楽天絞込ハック・AIEO対策・外部SNS流入の複合施策により、平均3〜8倍の流入増を実現しています。');
 
   // 施策4カード（舟瀬式ナレッジベース：楽天・Yahoo!両対応のアクセス戦略）
   const accessStrategies = [
@@ -900,7 +911,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s6.addText(`${st.icon}  ${st.title}`, {
       x: sx + 0.12, y: sy + 0.04, w: 4.35, h: 0.32,
-      fontSize: 11, fontFace: fontJP, color: C.white, bold: true, margin: 0
+      fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
     });
     s6.addText(st.body, {
       x: sx + 0.12, y: sy + 0.46, w: 4.35, h: 0.78,
@@ -943,6 +954,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s7 = pres.addSlide();
   s7.background = { color: C.white };
   addSlideHeader(s7, 6, '転換率(CVR)の向上（舟瀬式）', 'カゴ落ち94%対策／レビュー質化／ギフト3恐怖排除／回遊×LTV');
+  addSlideSummary(s7, 'カゴ落ち率94%の改善を核心に、レビュー質化・LTV設計の3本柱で転換率（CVR）を引き上げます。CVRが1%改善するだけで月商は大幅に増加します。');
 
   const cvrStrategies = [
     {
@@ -987,7 +999,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s7.addText(`${st.icon}  ${st.title}`, {
       x: sx + 0.12, y: sy + 0.04, w: 4.35, h: 0.32,
-      fontSize: 11, fontFace: fontJP, color: C.white, bold: true, margin: 0
+      fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
     });
     s7.addText(st.body, {
       x: sx + 0.12, y: sy + 0.46, w: 4.35, h: 0.78,
@@ -1028,6 +1040,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s8 = pres.addSlide();
   s8.background = { color: C.white };
   addSlideHeader(s8, 7, '施策ロードマップ　12ヶ月計画', '課題解決から成果刈り取りまでの全体スケジュール');
+  addSlideSummary(s8, '12ヶ月を3フェーズに分け、施策の優先順位と実施タイミングを明確化します。フェーズごとに成果を積み上げることで、確実に目標月商を達成します。');
 
   // フェーズヘッダー
   const phases = [
@@ -1041,11 +1054,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     const px = 0.3 + i * 2.38;
     const textClr = i < 2 ? C.dark : C.white;
     s8.addShape(pres.shapes.RECTANGLE, {
-      x: px, y: 1.15, w: 2.22, h: 0.7,
+      x: px, y: 1.28, w: 2.22, h: 0.7,
       fill: { color: ph.color }, line: { color: ph.color }, rectRadius: 0.1
     });
     s8.addText(ph.label, {
-      x: px + 0.1, y: 1.18, w: 2.02, h: 0.3,
+      x: px + 0.1, y: 1.31, w: 2.02, h: 0.3,
       fontSize: 13, fontFace: fontEN, color: textClr, bold: true, margin: 0
     });
     s8.addText(`${ph.sub}（${ph.range}）`, {
@@ -1142,7 +1155,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s9.addText('モンテカルロ法1,000回試行による確率的売上予測', {
     x: 0.7, y: 3.05, w: 4.5, h: 0.35,
-    fontSize: 11, fontFace: fontJP, color: C.tealDark, margin: 0
+    fontSize: 13, fontFace: fontJP, color: C.tealDark, margin: 0
   });
   s9.addShape(pres.shapes.RECTANGLE, {
     x: 0.7, y: 3.5, w: 3.5, h: 0.04,
@@ -1155,6 +1168,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s9b = pres.addSlide();
   s9b.background = { color: C.white };
   addSlideHeader(s9b, 8, '売上シミュレーション概要', 'モンテカルロ法1,000回試行による確率的売上予測');
+  addSlideSummary(s9b, `モンテカルロ法1,000回試行により、支援あり・支援なし・ジャンル平均の3シナリオを確率的に算出しました。目標月商${formatCurrency(finalSales)}への到達可能性を可視化します。`);
 
   // 3つのKPIカード（大型）
   const bigKpis = [
@@ -1182,7 +1196,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s9b.addText(kpi.sub, {
       x: kx + 0.15, y: 2.11, w: 2.75, h: 0.28,
-      fontSize: 9, fontFace: fontJP, color: kpi.dark ? C.tealBg : C.slateLight, margin: 0
+      fontSize: 13, fontFace: fontJP, color: kpi.dark ? C.tealBg : C.slateLight, margin: 0
     });
   });
 
@@ -1193,7 +1207,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s9b.addText('目標達成の根拠内訳（弊社支援データ連動）', {
     x: 0.5, y: 2.75, w: 9, h: 0.25,
-    fontSize: 11, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
   });
 
   const rationaleItems = analysisResult.targetRationale?.breakdown || [
@@ -1216,7 +1230,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s9b.addText(item.ratio, {
       x: 0.3, y: ry + 0.15, w: 0.7, h: 0.34,
-      fontSize: 11, fontFace: fontEN, color: C.white, bold: true, align: 'center', margin: 0
+      fontSize: 13, fontFace: fontEN, color: C.white, bold: true, align: 'center', margin: 0
     });
     s9b.addText(item.label, {
       x: 1.1, y: ry + 0.13, w: 6.5, h: 0.38,
@@ -1238,6 +1252,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s11 = pres.addSlide();
   s11.background = { color: C.white };
   addSlideHeader(s11, 9, 'シミュレーション詳細①　マイルストーン', '4段階マイルストーンの目標値と上昇・リスク要因');
+  addSlideSummary(s11, '3・6・9・12ヶ月の4段階マイルストーンで進捗を管理し、目標月商への道筋を明確に示します。各時点の月商予測と成長要因・リスク要因を定義します。');
 
   const simData2 = analysisResult.simulationData || [];
   const getMilestoneData = (month) => {
@@ -1257,17 +1272,17 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     const mx = 0.3 + i * 2.38;
     const isTarget = i === 3;
     s11.addShape(pres.shapes.RECTANGLE, {
-      x: mx, y: 1.15, w: 2.22, h: 2.8,
+      x: mx, y: 1.28, w: 2.22, h: 2.67,
       fill: { color: isTarget ? C.tealBg : C.slateBg },
       line: { color: isTarget ? C.teal : C.tealLight, width: isTarget ? 2 : 1 },
       rectRadius: 0.14
     });
     s11.addShape(pres.shapes.RECTANGLE, {
-      x: mx, y: 1.15, w: 2.22, h: 0.45,
+      x: mx, y: 1.28, w: 2.22, h: 0.45,
       fill: { color: isTarget ? C.teal : C.tealLight }, line: { color: isTarget ? C.teal : C.tealLight }, rectRadius: 0.14
     });
     s11.addText(`${ms.month}ヶ月目`, {
-      x: mx + 0.1, y: 1.18, w: 2.02, h: 0.28,
+      x: mx + 0.1, y: 1.31, w: 2.02, h: 0.28,
       fontSize: 13, fontFace: fontEN, color: isTarget ? C.white : C.tealDark, bold: true, align: 'center', margin: 0
     });
     s11.addText(ms.label, {
@@ -1286,7 +1301,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     const growth = ((ms.sales / currentSales - 1) * 100).toFixed(0);
     s11.addText(`現状比 +${growth}%`, {
       x: mx + 0.1, y: 2.41, w: 2.02, h: 0.22,
-      fontSize: 9, fontFace: fontJP,
+      fontSize: 13, fontFace: fontJP,
       color: isTarget ? C.tealDark : C.emerald, bold: true, align: 'center', margin: 0
     });
     s11.addShape(pres.shapes.RECTANGLE, {
@@ -1313,7 +1328,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s11.addText('▲  上昇要因（アップサイド）', {
     x: 0.5, y: 4.14, w: 4.25, h: 0.28,
-    fontSize: 11, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
   });
   upsides.forEach((u, i) => {
     s11.addText(`• ${u.substring(0, 80)}${u.length > 80 ? '...' : ''}`, {
@@ -1332,7 +1347,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s11.addText('▼  リスク要因（ダウンサイド）', {
     x: 5.25, y: 4.14, w: 4.25, h: 0.28,
-    fontSize: 11, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
   });
   downsides.forEach((d, i) => {
     s11.addText(`• ${d.substring(0, 80)}${d.length > 80 ? '...' : ''}`, {
@@ -1348,6 +1363,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s12 = pres.addSlide();
   s12.background = { color: C.white };
   addSlideHeader(s12, 10, 'シミュレーション詳細②　月次KPI分解', '売上＝アクセス×CVR×客単価（逆算）/ 購入件数の月次内訳');
+  addSlideSummary(s12, '売上をアクセス数×CVR×客単価に分解し、各KPIの月次達成計画を逆算で定義します。数値化することで、どの指標を優先改善すべきかが一目で判断できます。');
 
   // テーブルヘッダー
   const tableHeaders = ['月', '売上予測', 'アクセス数', 'CVR', '客単価', '購入件数', '前月比'];
@@ -1358,11 +1374,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   tableHeaders.forEach((h, i) => {
     const tx = tableX + colWidths.slice(0, i).reduce((a,b) => a+b, 0);
     s12.addShape(pres.shapes.RECTANGLE, {
-      x: tx, y: 1.15, w: colWidths[i], h: 0.35,
+      x: tx, y: 1.28, w: colWidths[i], h: 0.35,
       fill: { color: C.tealDark }, line: { color: C.tealDark }
     });
     s12.addText(h, {
-      x: tx + 0.02, y: 1.18, w: colWidths[i] - 0.04, h: 0.28,
+      x: tx + 0.02, y: 1.31, w: colWidths[i] - 0.04, h: 0.28,
       fontSize: 8.5, fontFace: fontJP, color: C.white, bold: true, align: 'center', margin: 0
     });
   });
@@ -1435,6 +1451,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s13 = pres.addSlide();
   s13.background = { color: C.white };
   addSlideHeader(s13, 11, 'シミュレーション詳細③　費用対効果・ROI分析', '広告投資対効果と12ヶ月累計利益シミュレーション');
+  addSlideSummary(s13, '広告ROI・損益分岐点・12ヶ月累計利益を算出しました。投資回収時期を明確にし、費用対効果の高い施策配分で利益最大化を実現します。');
 
   // 現状 vs 目標 ROI比較
   const adPct = 5.5; // 平均広告費率
@@ -1462,11 +1479,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   ].forEach((card, ci) => {
     const cx = 0.3 + ci * 4.85;
     s13.addShape(pres.shapes.RECTANGLE, {
-      x: cx, y: 1.15, w: 4.6, h: 3.7,
+      x: cx, y: 1.28, w: 4.6, h: 3.57,
       fill: { color: card.bgColor }, line: { color: ci === 1 ? C.teal : C.tealLight, width: ci === 1 ? 2 : 1 }, rectRadius: 0.15
     });
     s13.addShape(pres.shapes.RECTANGLE, {
-      x: cx, y: 1.15, w: 4.6, h: 0.48,
+      x: cx, y: 1.28, w: 4.6, h: 0.48,
       fill: { color: ci === 1 ? C.teal : C.tealDark }, line: { color: ci === 1 ? C.teal : C.tealDark }, rectRadius: 0.15
     });
     s13.addText(card.label, {
@@ -1496,7 +1513,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       });
       s13.addText(item.lbl, {
         x: cx + 0.25, y: iy + 0.06, w: 1.5, h: 0.22,
-        fontSize: 9.5, fontFace: fontJP, color: C.slateLight, bold: isBold, margin: 0
+        fontSize: 11.5, fontFace: fontJP, color: C.slateLight, bold: isBold, margin: 0
       });
       s13.addText(item.val, {
         x: cx + 1.8, y: iy + 0.04, w: 2.55, h: 0.26,
@@ -1514,7 +1531,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s13.addText(`12ヶ月累計での売上増加額（概算）：+${formatCurrency(Math.max(0, annualExtra))}　　広告費は売上対比 ${adPct}% 平均想定`, {
     x: 0.5, y: 5.05, w: 9, h: 0.24,
-    fontSize: 9.5, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 11.5, fontFace: fontJP, color: C.white, bold: true, margin: 0
   });
   addFooter(s13, 11);
 
