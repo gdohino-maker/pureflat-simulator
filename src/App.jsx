@@ -528,7 +528,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s2 = pres.addSlide();
   s2.background = { color: C.white };
   addSlideHeader(s2, 1, '貴社・商品の現状サマリー', `${companyName} / ${genreName}`);
-  addSlideSummary(s2, `貴社の現状月商・評価スコア・商品概要を整理しました。この現状把握を起点に、具体的な改善施策と売上目標を設計します。`);
+  addSlideSummary(s2, `${companyName}（${genreName}）の現在月商${formatCurrency(currentSales)}から目標${formatCurrency(targetSales)}へ。商品・評価・ページ情報を整理し、課題特定と施策設計の起点を明確にします。`);
 
   // 左カラム：商品情報
   s2.addShape(pres.shapes.RECTANGLE, {
@@ -616,11 +616,10 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   // ════════════════════════════════════════════════════════
   const s3 = pres.addSlide();
   s3.background = { color: C.white };
-  addSlideHeader(s3, 2, '現状分析　強み ／ 改善点', 'AIが商品ページを解析し、数値根拠に基づいて抽出');
-  addSlideSummary(s3, 'AIが商品ページを解析し、守るべき強みと優先対処が必要な改善点を数値根拠とともに抽出しました。左列の強みを伸ばしながら右列の改善点を解消することが、売上向上の最短経路です。');
-
   const goodPoints = analysisResult.currentStatus?.good || [];
   const badPoints  = analysisResult.currentStatus?.bad  || [];
+  addSlideHeader(s3, 2, '現状分析　強み ／ 改善点', 'AIが商品ページを解析し、数値根拠に基づいて抽出');
+  addSlideSummary(s3, `AIが商品ページを解析し、強み${goodPoints.length}点・改善点${badPoints.length}点を数値根拠とともに特定しました。強みを軸に改善点を優先解消することが売上最大化の最短経路です。`);
 
   // 強みカラム
   s3.addShape(pres.shapes.RECTANGLE, {
@@ -695,6 +694,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s4 = pres.addSlide();
   s4.background = { color: C.white };
   addSlideHeader(s4, 3, '市場データ・ジャンル分析', `弊社支援${genreName}ジャンル実績データに基づく市場洞察`);
+  addSlideSummary(s4, `${genreName}ジャンルの市場特性と年間セールカレンダーを整理しました。弊社の支援実績データをもとに、最も効果が出やすいタイミングと施策を特定します。`);
 
   // ジャンル洞察テキスト
   const genreAnalysis = getGenreInsight(genreName);
@@ -768,7 +768,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s5 = pres.addSlide();
   s5.background = { color: C.white };
   addSlideHeader(s5, 4, '抽出された課題', 'アクセス数不足 ／ 転換率（CVR）低下の2軸で整理');
-  addSlideSummary(s5, 'ページ解析の結果、①アクセス数不足と②転換率（CVR）低下の2軸が主要課題として浮かび上がりました。この2点を解消することが売上V字回復への最短経路です。');
+  const rawIssuesPreview = analysisResult.currentIssues || [];
+  const firstIssueLabel = Array.isArray(rawIssuesPreview) && rawIssuesPreview.length > 0
+    ? rawIssuesPreview[0].substring(0, 20) + '…'
+    : 'アクセス不足';
+  addSlideSummary(s5, `解析の結果、①${firstIssueLabel}を中心とするアクセス不足と②CVR低下の2軸が主要課題です。この解消が${companyName}の売上V字回復への最短経路となります。`);
 
   // 中央フロー矢印
   s5.addShape(pres.shapes.RECTANGLE, {
