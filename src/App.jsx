@@ -339,6 +339,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const genreName   = formData.genre || 'EC';
   const currentSales = Number(formData.currentMonthlySales);
   const finalSales   = analysisResult.finalSales || currentSales * 2;
+  const targetSales  = getTargetSales(currentSales);
   const noSupportFinal = Math.round(currentSales * 0.85);
   const growthMultiple = (finalSales / currentSales).toFixed(1);
   const growthRate = ((finalSales / currentSales - 1) * 100).toFixed(0);
