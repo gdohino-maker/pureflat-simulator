@@ -1070,11 +1070,12 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
 
   // シミュレーションデータからマイルストーン月商を取得（s11と同値）
+  // スムーズ成長曲線（smoothstep）でfinalSalesへ着地。SALEスパイクによる異常値を回避。
   const getSimSales = (month) => {
-    const simD = analysisResult.simulationData || [];
-    const dayIdx = month * 30;
-    const d = simD.find(x => x.dayIndex === dayIdx) || simD[Math.min(dayIdx - 1, simD.length - 1)];
-    return d ? Math.round(d.supportScenario) : Math.round(currentSales * (1 + month / 12 * 1.5));
+    if (month === 12) return finalSales;
+    const t = month / 12;
+    const eased = t * t * (3 - 2 * t);
+    return Math.round(currentSales + (finalSales - currentSales) * eased);
   };
 
   // 施策ロウ
@@ -1258,11 +1259,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   addSlideHeader(s11, 9, 'シミュレーション詳細①　マイルストーン', '4段階マイルストーンの目標値と上昇・リスク要因');
   addSlideSummary(s11, '3・6・9・12ヶ月の4段階マイルストーンで進捗を管理し、目標月商への道筋を明確に示します。各時点の月商予測と成長要因・リスク要因を定義します。');
 
-  const simData2 = analysisResult.simulationData || [];
   const getMilestoneData = (month) => {
-    const dayIdx = month * 30;
-    const d = simData2.find(x => x.dayIndex === dayIdx) || simData2[Math.min(dayIdx-1, simData2.length-1)];
-    return d ? d.supportScenario : 0;
+    if (month === 12) return finalSales;
+    const t = month / 12;
+    const eased = t * t * (3 - 2 * t);
+    return Math.round(currentSales + (finalSales - currentSales) * eased);
   };
 
   const msData = [
@@ -3119,28 +3120,26 @@ const handleExportCSV = () => {
                         const currentSales = Number(formData.currentMonthlySales);
                         const milestones = {};
                         
-                        const simData = analysisResult.simulationData;
-                        for (const month of [3, 6, 9, 12]) {
-                          const dayIdx = month * 30;
-                          const dayData = simData.find(d => d.dayIndex === dayIdx)
-                            || simData[Math.min(dayIdx - 1, simData.length - 1)];
+                        const finalSalesVal = analysisResult.finalSales || currentSales * 2;
+                        // smoothstep曲線でfinalSalesに着地（SALEスパイク異常値を回避）
+                        const calcSmooth = (m) => {
+                          if (m === 12) return finalSalesVal;
+                          const t = m / 12;
+                          const eased = t * t * (3 - 2 * t);
+                          return Math.round(currentSales + (finalSalesVal - currentSales) * eased);
+                        };
+                        const smoothVals = { 0: currentSales, 3: calcSmooth(3), 6: calcSmooth(6), 9: calcSmooth(9), 12: calcSmooth(12) };
 
-                          if (dayData) {
-                            const sales = dayData.supportScenario;
-                            const prevDayIdx = (month - 1) * 30;
-                            const prevDayData = month === 3
-                              ? null
-                              : (simData.find(d => d.dayIndex === prevDayIdx)
-                                  || simData[Math.min(prevDayIdx - 1, simData.length - 1)]);
-                            const prevSales = prevDayData ? prevDayData.supportScenario : currentSales;
-                            const growth = ((sales - prevSales) / prevSales) * 100;
-                            milestones[month] = {
-                              sales: Math.round(sales),
-                              growth,
-                              dateStr: `${month}ヶ月目`,
-                              dayIndex: dayIdx
-                            };
-                          }
+                        for (const month of [3, 6, 9, 12]) {
+                          const sales = smoothVals[month];
+                          const prevSales = smoothVals[month - 3] ?? currentSales;
+                          const growth = ((sales - prevSales) / prevSales) * 100;
+                          milestones[month] = {
+                            sales,
+                            growth,
+                            dateStr: `${month}ヶ月目`,
+                            dayIndex: month * 30
+                          };
                         }
                         
                         return [3, 6, 9, 12].map(month => {
