@@ -1047,7 +1047,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   ];
 
   phases.forEach((ph, i) => {
-    const px = 0.3 + i * 2.38;
+    const px = 0.28 + i * 2.36;
     const textClr = i < 2 ? C.dark : C.white;
     s8.addShape(pres.shapes.RECTANGLE, {
       x: px, y: 1.28, w: 2.22, h: 0.7,
@@ -1069,24 +1069,32 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     fill: { color: C.tealLight }, line: { color: C.tealLight }
   });
 
+  // シミュレーションデータからマイルストーン月商を取得（s11と同値）
+  const getSimSales = (month) => {
+    const simD = analysisResult.simulationData || [];
+    const dayIdx = month * 30;
+    const d = simD.find(x => x.dayIndex === dayIdx) || simD[Math.min(dayIdx - 1, simD.length - 1)];
+    return d ? Math.round(d.supportScenario) : Math.round(currentSales * (1 + month / 12 * 1.5));
+  };
+
   // 施策ロウ
   const roadmapItems = [
-    { cat: '📊 アクセス施策', color: C.blue,
+    { cat: 'アクセス施策', color: C.blue,
       ph1: 'AIEO属性100%入力\nメイン画像CTR特化設計',
       ph2: 'サーチ申請×限定SALE\n外部SNS誘導フロー構築',
       ph3: '特設ページ×SALE最大化\nMeta/TikTok広告本格化',
       ph4: 'SALE連動×外部流入最大化\nAI検索自走サイクル確立'
     },
-    { cat: '🔄 CVR施策', color: C.rose,
+    { cat: 'CVR施策', color: C.rose,
       ph1: '商品ページ権威訴求改修\n購入後ストーリー設計',
       ph2: 'レビュー質化フロー構築\n同梱物LTV設計導入',
       ph3: 'LINE×ポイントデー刈取\nギフト対応・回遊バナー設置',
       ph4: 'LTVフロー完成・リピート最大化\nRPP広告依存ゼロへ'
     },
-    { cat: '📈 期待売上', color: C.tealDark,
-      ph1: `${formatCurrency(Math.round(currentSales * 1.3))}〜`,
-      ph2: `${formatCurrency(Math.round(currentSales * 1.8))}〜`,
-      ph3: `${formatCurrency(Math.round(currentSales * 2.3))}〜`,
+    { cat: '期待売上', color: C.tealDark,
+      ph1: formatCurrency(getSimSales(3)),
+      ph2: formatCurrency(getSimSales(6)),
+      ph3: formatCurrency(getSimSales(9)),
       ph4: `${formatCurrency(finalSales)} 達成`
     },
   ];
@@ -1094,24 +1102,24 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   roadmapItems.forEach((row, ri) => {
     const ry = 2.1 + ri * 1.05;
     s8.addShape(pres.shapes.RECTANGLE, {
-      x: 0.3, y: ry, w: 1.35, h: 0.95,
+      x: 0.28, y: ry, w: 1.27, h: 0.95,
       fill: { color: row.color }, line: { color: row.color }, rectRadius: 0.1
     });
     s8.addText(row.cat, {
-      x: 0.35, y: ry + 0.18, w: 1.25, h: 0.6,
+      x: 0.30, y: ry + 0.18, w: 1.20, h: 0.6,
       fontSize: 8.5, fontFace: fontJP, color: C.white, bold: true, align: 'center', valign: 'middle', margin: 0
     });
     [row.ph1, row.ph2, row.ph3, row.ph4].forEach((txt, pi) => {
-      const px = 1.72 + pi * 2.38;
+      const px = 1.62 + pi * 1.97;
       const isFinal = ri === 2 && pi === 3;
       s8.addShape(pres.shapes.RECTANGLE, {
-        x: px, y: ry, w: 2.22, h: 0.95,
+        x: px, y: ry, w: 1.88, h: 0.95,
         fill: { color: isFinal ? C.tealBg : C.slateBg },
         line: { color: isFinal ? C.teal : 'E2E8F0', width: isFinal ? 2 : 1 },
         rectRadius: 0.08
       });
       s8.addText(txt, {
-        x: px + 0.1, y: ry + 0.08, w: 2.02, h: 0.8,
+        x: px + 0.08, y: ry + 0.08, w: 1.72, h: 0.80,
         fontSize: ri === 2 ? 10 : 8.5, fontFace: fontJP,
         color: isFinal ? C.tealDark : C.dark,
         bold: isFinal, margin: 2, align: 'center', valign: 'middle'
@@ -1122,7 +1130,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   // セール目印
   [[1, '3月SALE'], [3, '6月SALE'], [5, '9月SALE'], [7, '12月SALE']].forEach(([col, label]) => {
     if (col < 8) {
-      const mx = 1.72 + Math.floor(col/2) * 2.38 + (col%2)*1.1;
+      const mx = 1.62 + Math.floor(col/2) * 1.97 + (col%2)*0.90;
       s8.addShape(pres.shapes.RECTANGLE, {
         x: mx, y: 4.3, w: 1.0, h: 0.28,
         fill: { color: C.rose }, line: { color: C.rose }, rectRadius: 0.06
@@ -3111,31 +3119,26 @@ const handleExportCSV = () => {
                         const currentSales = Number(formData.currentMonthlySales);
                         const milestones = {};
                         
+                        const simData = analysisResult.simulationData;
                         for (const month of [3, 6, 9, 12]) {
-                          const monthStart = (month - 1) * 30 + 1;
-                          const monthEnd = month * 30;
-                          const monthData = analysisResult.simulationData.filter(
-                            d => d.dayIndex >= monthStart && d.dayIndex <= monthEnd
-                          );
+                          const dayIdx = month * 30;
+                          const dayData = simData.find(d => d.dayIndex === dayIdx)
+                            || simData[Math.min(dayIdx - 1, simData.length - 1)];
 
-                          if (monthData.length > 0) {
-                            const avgSales = monthData.reduce((sum, d) => sum + d.supportScenario, 0) / monthData.length;
-                            const prevMonthEnd = (month - 1) * 30;
-                            const prevMonthStart = prevMonthEnd - 29;
-                            const prevData = month === 3
+                          if (dayData) {
+                            const sales = dayData.supportScenario;
+                            const prevDayIdx = (month - 1) * 30;
+                            const prevDayData = month === 3
                               ? null
-                              : analysisResult.simulationData.filter(
-                                  d => d.dayIndex >= prevMonthStart && d.dayIndex <= prevMonthEnd
-                                );
-                            const prevAvg = prevData && prevData.length > 0
-                              ? prevData.reduce((sum, d) => sum + d.supportScenario, 0) / prevData.length
-                              : currentSales;
-                            const growth = ((avgSales - prevAvg) / prevAvg) * 100;
+                              : (simData.find(d => d.dayIndex === prevDayIdx)
+                                  || simData[Math.min(prevDayIdx - 1, simData.length - 1)]);
+                            const prevSales = prevDayData ? prevDayData.supportScenario : currentSales;
+                            const growth = ((sales - prevSales) / prevSales) * 100;
                             milestones[month] = {
-                              sales: Math.round(avgSales),
+                              sales: Math.round(sales),
                               growth,
                               dateStr: `${month}ヶ月目`,
-                              dayIndex: monthEnd
+                              dayIndex: dayIdx
                             };
                           }
                         }
