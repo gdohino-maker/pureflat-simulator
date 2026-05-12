@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PptxGenJS from 'pptxgenjs';
 import { 
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
@@ -293,20 +294,8 @@ const handleDownloadCSV = (detailedMonthly, formData, operatingCosts) => {
   document.body.removeChild(link);
 };
 
-// PPTX生成関数（pptxgenjsをCDN経由で使用）
-const loadPptxGenJs = () => {
-  return new Promise((resolve, reject) => {
-    if (window.PptxGenJS) { resolve(window.PptxGenJS); return; }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
-    script.onload = () => resolve(window.PptxGenJS);
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-};
-
+// PPTX生成関数（pptxgenjs npm パッケージ使用）
 const generatePptx = async (analysisResult, formData, genreStats, formatCurrency, getGenreInsight, operatingCosts = {}) => {
-  const PptxGenJS = await loadPptxGenJs();
   const pres = new PptxGenJS();
   pres.layout = 'LAYOUT_16x9';
   pres.title = `EC売上改善提案書 - ${formData.companyName || '対象店舗'}`;
@@ -3099,6 +3088,11 @@ const handleExportCSV = () => {
                           {isGeneratingPptx ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileDown className="w-5 h-5" />}
                           {isGeneratingPptx ? '提案資料を生成中...' : '提案資料を自動生成 (.pptx)'}
                         </button>
+                        {pptxError && (
+                          <div className="text-red-600 text-sm font-bold bg-red-50 px-4 py-2 rounded-xl border border-red-200 flex items-center gap-2 max-w-xs">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />{pptxError}
+                          </div>
+                        )}
                         <div className="bg-white p-6 rounded-3xl border border-slate-200 w-full lg:w-auto text-center lg:text-right shadow-md">
                           <p className="text-sm font-black text-slate-400 mb-2 uppercase tracking-widest">1年後の着地予測月商</p>
                           <p className="text-5xl md:text-6xl font-black text-[#26A69A] tracking-tighter">{formatCurrency(analysisResult.finalSales)}</p>
