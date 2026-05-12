@@ -380,18 +380,14 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     }
   };
 
-  // ── ヘルパー：コンテンツヘッダー（タイトル文字長に応じてフォントサイズ自動調整）──
+  // ── ヘルパー：コンテンツヘッダー（文字アウトラインで波背景上でも視認可）──
   const addSlideHeader = (slide, num, title, subtitle) => {
     addContentBase(slide);
-    // 波背景の上にソリッドな帯を敷いてタイトル文字を見えるようにする
-    slide.addShape(pres.shapes.RECTANGLE, {
-      x: 0, y: 0, w: 10, h: 0.68,
-      fill: { color: C.tealDark }, line: { color: C.tealDark }
-    });
     const titleFontSize = title.length > 24 ? 20 : title.length > 18 ? 24 : 28;
     slide.addText(title, {
       x: 0.45, y: 0.04, w: 8.8, h: 0.60,
-      fontSize: titleFontSize, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0
+      fontSize: titleFontSize, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0,
+      outline: { color: '003344', size: 1.5 }
     });
     if (num) addFooter(slide, num);
   };
@@ -408,7 +404,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     slide.addText(text, {
       x: 0.50, y: 0.71, w: 9.05, h: 0.48,
-      fontSize: 16, fontFace: fontJP, color: C.tealDark, bold: false, margin: 4, align: 'left', valign: 'middle'
+      fontSize: 13, fontFace: fontJP, color: C.tealDark, bold: false, margin: 4, align: 'left', valign: 'middle'
     });
   };
 
@@ -535,9 +531,9 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     x: 0.3, y: 1.28, w: 4.7, h: 0.5,
     fill: { color: C.tealDark }, line: { color: C.tealDark }, rectRadius: 0.15
   });
-  s2.addText('🏪  企業・商品情報', {
-    x: 0.5, y: 1.2, w: 4.3, h: 0.38,
-    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
+  s2.addText('企業・商品情報', {
+    x: 0.5, y: 1.30, w: 4.3, h: 0.40,
+    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0
   });
   const qd = analysisResult.quantitativeData || {};
   const infoLines = [
@@ -796,7 +792,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     : (rawIssues.access || []).slice(0, 3);
 
   accessIssues.forEach((issue, i) => {
-    const iy = 1.7 + i * 1.12;
+    const iy = 1.76 + i * 1.12;
     s5.addShape(pres.shapes.RECTANGLE, {
       x: 0.3, y: iy, w: 4.3, h: 1.02,
       fill: { color: C.blueBg }, line: { color: '93C5FD', width: 1.5 }, rectRadius: 0.12
@@ -839,7 +835,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     : [...rawCvrIssues, ...cvrDefaults.slice(0, 3 - rawCvrIssues.length)];
 
   cvrIssues.forEach((issue, i) => {
-    const iy = 1.7 + i * 1.12;
+    const iy = 1.76 + i * 1.12;
     s5.addShape(pres.shapes.RECTANGLE, {
       x: 5.4, y: iy, w: 4.3, h: 1.02,
       fill: { color: C.roseBg }, line: { color: C.roseLight, width: 1.5 }, rectRadius: 0.12
@@ -1180,22 +1176,22 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   bigKpis.forEach((kpi, i) => {
     const kx = 0.3 + i * 3.2;
     s9b.addShape(pres.shapes.RECTANGLE, {
-      x: kx, y: 1.1, w: 3.05, h: 1.45,
+      x: kx, y: 1.26, w: 3.05, h: 1.36,
       fill: { color: kpi.dark ? C.teal : C.slateBg },
       line: { color: kpi.dark ? C.tealMid : C.tealLight, width: kpi.dark ? 2 : 1 },
       rectRadius: 0.15
     });
     s9b.addText(kpi.label, {
-      x: kx + 0.15, y: 1.2, w: 2.75, h: 0.3,
+      x: kx + 0.15, y: 1.30, w: 2.75, h: 0.28,
       fontSize: 10, fontFace: fontJP, color: kpi.dark ? C.tealLight : C.slateLight, bold: true, margin: 0
     });
     s9b.addText(kpi.value, {
-      x: kx + 0.1, y: 1.49, w: 2.85, h: 0.62,
+      x: kx + 0.1, y: 1.58, w: 2.85, h: 0.58,
       fontSize: kpi.dark ? 20 : 18, fontFace: fontJP,
       color: kpi.dark ? C.white : C.dark, bold: true, margin: 0
     });
     s9b.addText(kpi.sub, {
-      x: kx + 0.15, y: 2.11, w: 2.75, h: 0.28,
+      x: kx + 0.15, y: 2.18, w: 2.75, h: 0.28,
       fontSize: 13, fontFace: fontJP, color: kpi.dark ? C.tealBg : C.slateLight, margin: 0
     });
   });
@@ -1282,11 +1278,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       fill: { color: isTarget ? C.teal : C.tealLight }, line: { color: isTarget ? C.teal : C.tealLight }, rectRadius: 0.14
     });
     s11.addText(`${ms.month}ヶ月目`, {
-      x: mx + 0.1, y: 1.31, w: 2.02, h: 0.28,
+      x: mx + 0.1, y: 1.30, w: 2.02, h: 0.24,
       fontSize: 13, fontFace: fontEN, color: isTarget ? C.white : C.tealDark, bold: true, align: 'center', margin: 0
     });
     s11.addText(ms.label, {
-      x: mx + 0.1, y: 1.44, w: 2.02, h: 0.18,
+      x: mx + 0.1, y: 1.54, w: 2.02, h: 0.17,
       fontSize: 8, fontFace: fontJP, color: isTarget ? C.tealLight : C.tealDark, align: 'center', margin: 0
     });
     s11.addText('月商予測', {
@@ -1491,11 +1487,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       fill: { color: ci === 1 ? C.teal : C.tealDark }, line: { color: ci === 1 ? C.teal : C.tealDark }, rectRadius: 0.15
     });
     s13.addText(card.label, {
-      x: cx + 0.15, y: 1.2, w: 4.3, h: 0.36,
-      fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
+      x: cx + 0.15, y: 1.30, w: 4.3, h: 0.40,
+      fontSize: 13, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0
     });
     s13.addText(formatCurrency(card.sales), {
-      x: cx + 0.15, y: 1.72, w: 4.3, h: 0.55,
+      x: cx + 0.15, y: 1.78, w: 4.3, h: 0.52,
       fontSize: 22, fontFace: fontJP, color: ci === 1 ? C.tealDark : C.dark, bold: true, margin: 0
     });
 
