@@ -380,12 +380,18 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     }
   };
 
-  // ── ヘルパー：コンテンツヘッダー（32pt タイトル）──
+  // ── ヘルパー：コンテンツヘッダー（タイトル文字長に応じてフォントサイズ自動調整）──
   const addSlideHeader = (slide, num, title, subtitle) => {
     addContentBase(slide);
+    // 波背景の上にソリッドな帯を敷いてタイトル文字を見えるようにする
+    slide.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.68,
+      fill: { color: C.tealDark }, line: { color: C.tealDark }
+    });
+    const titleFontSize = title.length > 24 ? 20 : title.length > 18 ? 24 : 28;
     slide.addText(title, {
-      x: 0.45, y: 0.04, w: 8.8, h: 0.62,
-      fontSize: 32, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0
+      x: 0.45, y: 0.04, w: 8.8, h: 0.60,
+      fontSize: titleFontSize, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0
     });
     if (num) addFooter(slide, num);
   };
@@ -864,26 +870,26 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   // 施策4カード（舟瀬式ナレッジベース：楽天・Yahoo!両対応のアクセス戦略）
   const accessStrategies = [
     {
-      icon: '🔎', title: '楽天：絞り込み検索ハック × 属性100%埋込',
-      body: '1ワード1位の「強者の戦い」を避け、ユーザーの絞り込み行動を先回りしニッチ属性の組合せで独占状態を作る舟瀬式戦略。売れ筋TOP5商品のタグID未入力項目を全て埋め、サジェストKW（AI検索対応）を商品説明文に注入。サーチ申請×限定SALEで新規流入最大8倍実績。',
+      icon: '🔎', title: '楽天：絞り込みハック × 属性100%埋込',
+      body: '絞り込み行動を先読みし、属性100%埋込＋サジェストKW注入でニッチ独占状態を構築。サーチ申請×限定SALEで新規流入最大8倍の実績あり。',
       kpi: '絞り込み検索順位＆CVR',
       action: '楽天RMS｜商品属性100%埋込｜即日完了'
     },
     {
       icon: '🚚', title: 'Yahoo!：優良配送認定 × アイテムマッチ広告',
-      body: 'Yahoo!は「お節介なレコメンド文化」をハックしたもん勝ち。優良配送認定（14時までの当日発送）で検索露出優先度を確保し、アイテムマッチ広告でレコメンド枠へ強制露出。LINEヤフー統合で13.6%成長市場の追い風に乗るタイミング。AIに「優等生な店」と学習させ露出面を強制拡張。',
+      body: '優良配送認定で検索露出を優先確保し、アイテムマッチ広告でレコメンド枠へ強制露出。LINEヤフー統合13.6%成長市場の追い風をフル活用。',
       kpi: 'アイテムマッチROAS＆レコメンド占有率',
       action: 'ストアクリエイターPro｜優良配送設定｜1週間以内'
     },
     {
       icon: '🖼️', title: 'メイン画像CTR特化 × LINE小画面対応',
-      body: '「0.1秒で指を止める」サムネイル設計が全モール共通の勝ちパターン。LINEショッピングタブや他社レコメンド枠という「小さな枠」でも商品が何か分かる大きな文字訴求を徹底。商品画像1枚目のABテストで検索結果のCTRを最大化し、規約ギリギリの訴求＋競合差別化デザインを実装。',
+      body: '0.1秒で指を止めるサムネイル設計。LINEの小画面でも視認できる大文字訴求を徹底し、画像ABテストで検索CTRを最大35%改善。',
       kpi: 'CTR +20〜35%',
       action: '画像1枚目ABテスト｜最新トレンド反映｜3日以内'
     },
     {
       icon: '🌐', title: 'AIEO × 外部流入によるランク自動上昇',
-      body: 'キーワード詰込SEOは終了。AIに「この商品は悩みを解決する」と確信させる質と量の両面攻め。カスタマーレビューの具体性蓄積＋構造化商品データ＋Q&A充実でAI推奨枠を獲得。Meta/X/TikTok広告で外部流入を誘導→モール内検索ランクが自動上昇する仕組みを構築し、RPP依存から卒業。',
+      body: 'KW詰込SEOは終焉。レビュー具体性蓄積＋外部SNS流入でAI推奨枠を獲得し、RPP依存から広告費ゼロの自走型成長サイクルへ転換。',
       kpi: 'オーガニック流入 +30〜50%',
       action: '商品紹介1行目にレビューKW採用｜当日実行'
     },
@@ -909,7 +915,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s6.addText(st.body, {
       x: sx + 0.12, y: sy + 0.46, w: 4.35, h: 0.78,
-      fontSize: 8.5, fontFace: fontJP, color: C.dark, margin: 2, align: 'left', valign: 'top'
+      fontSize: 10, fontFace: fontJP, color: C.dark, margin: 2, align: 'left', valign: 'top'
     });
     // KPIバッジ
     s6.addShape(pres.shapes.RECTANGLE, {
@@ -953,25 +959,25 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const cvrStrategies = [
     {
       icon: '🛒', title: 'カゴ落ち94%対策 × 決済摩擦ゼロ設計',
-      body: '94%がカート投入後に離脱する現実。舟瀬式「穴の空いたバケツに水を注ぐのをやめる」戦略。送料無料ライン・配送日・返品ポリシーをカート内で即座に明示。ID決済（Amazon Pay/楽天ペイ）導入で決済画面のクリック数を半減。「一瞬でも迷う書き方」を10秒以内で判断し排除。',
+      body: '94%が離脱するカートの穴を塞ぐ。送料無料ライン・配送日をカート内で即明示し、ID決済（楽天ペイ等）導入で決済クリック数を半減。',
       kpi: 'カート放棄率 -15〜25%',
       action: '自社カート画面を自分で触る｜当日修正'
     },
     {
       icon: '⭐', title: 'レビュー質化（AI意味解析対策）',
-      body: '件数でなく「文脈」が検索順位に直結するセマンティック・レビュー時代。星5レビュー3件を選びKWを商品名冒頭へリライト。サンクスメールで「〇〇についての感想を」とAI学習KWを自然誘導。低評価への神対応を公開し店舗の誠実さで転換率向上。サクラ禁忌。',
+      body: '件数より文脈が検索順位に直結する時代。星5レビューKWで商品名リライト＋サンクスメールでAI学習KWを自然誘導。低評価への真摯な公開返信も転換率を向上。',
       kpi: 'レビューKW出現率＆自然検索流入',
       action: '星5レビューKWで商品名リライト｜当日実行'
     },
     {
-      icon: '🎁', title: 'ギフト対応3恐怖の排除（客単価+10%）',
-      body: '舟瀬式：贈る側の「届かない・ボロボロで届く・値段がバレる」3恐怖を先回り排除。ラッピング/メッセージカード/手提げ袋を画像2枚目までに明示。「金額明細は入れません」を決済ボタン直上に大表示。ラッピング有料は禁忌。ギフト対応は選ばれるための最低条件。',
+      icon: '🎁', title: 'ギフト3恐怖の排除（客単価+10%）',
+      body: '「届かない・ボロボロ・値段バレ」3恐怖を先回り排除。ラッピング無料＋「金額明細なし」を決済ボタン直上に大表示し、ギフトCVRを大幅改善。',
       kpi: 'ギフトKW経由CVR＆星5率',
       action: 'のし/ラッピング無料設定＋画像追加｜3日以内'
     },
     {
       icon: '🔄', title: '回遊バナー × LTV同梱設計',
-      body: '商品ページを「終着駅」にさせない舟瀬式回遊戦略。スマホ決済ボタンの上下に売れ筋ベスト3バナー設置でPV/UU比改善。同梱物（次回クーポン・使い方ガイド）で2回目購入率最大化。LINEヤフー連携・5と0のつく日ポイントUP連動で広告ゼロのリピーター基盤を構築。',
+      body: '決済ボタン上下に売れ筋ベスト3バナーを設置して回遊を促進。同梱物（次回クーポン）で2回目購入率を最大化し、広告ゼロのリピーター基盤を構築。',
       kpi: '客単価＋10%／リピート＋25〜40%',
       action: '決済ボタン上下に回遊バナー設置｜当日実行'
     },
@@ -997,7 +1003,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s7.addText(st.body, {
       x: sx + 0.12, y: sy + 0.46, w: 4.35, h: 0.78,
-      fontSize: 8.5, fontFace: fontJP, color: C.dark, margin: 2, align: 'left', valign: 'top'
+      fontSize: 10, fontFace: fontJP, color: C.dark, margin: 2, align: 'left', valign: 'top'
     });
     s7.addShape(pres.shapes.RECTANGLE, {
       x: sx + 0.12, y: sy + 1.28, w: 2.2, h: 0.22,
