@@ -305,7 +305,7 @@ const loadPptxGenJs = () => {
   });
 };
 
-const generatePptx = async (analysisResult, formData, genreStats, formatCurrency, getGenreInsight) => {
+const generatePptx = async (analysisResult, formData, genreStats, formatCurrency, getGenreInsight, operatingCosts = {}) => {
   const PptxGenJS = await loadPptxGenJs();
   const pres = new PptxGenJS();
   pres.layout = 'LAYOUT_16x9';
@@ -1457,15 +1457,19 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   addSlideHeader(s13, 11, 'シミュレーション詳細③　費用対効果・ROI分析', '広告投資対効果と12ヶ月累計利益シミュレーション');
   addSlideSummary(s13, '広告ROI・損益分岐点・12ヶ月累計利益を算出しました。投資回収時期を明確にし、費用対効果の高い施策配分で利益最大化を実現します。');
 
-  // 現状 vs 目標 ROI比較
-  const adPct = 5.5; // 平均広告費率
-  const pfPct = 5;
-  const shipPerOrder = 500;
-  const fixedCost = 100000;
+  // 現状 vs 目標 ROI比較（operatingCosts設定値を反映）
+  const adPct = ((operatingCosts.adSpendMinPercent || 3) + (operatingCosts.adSpendMaxPercent || 8)) / 2;
+  const pfPct = operatingCosts.platformFeePercent || 5;
+  const shipPerOrder = operatingCosts.shippingCost || 500;
+  const fixedCost = operatingCosts.operationalCostFixed || 100000;
+  const aovVal = operatingCosts.aov || 5000;
 
-  const calcProfit = (sales, aov) => {
-    const ords = Math.round(sales / (aov || 5000));
-    const ad = Math.round(sales * adPct / 100);
+  const calcProfit = (sales, isCurrentCard) => {
+    const ords = Math.round(sales / aovVal);
+    // 現在カードは実績広告費があればそちらを使用
+    const ad = isCurrentCard && (operatingCosts.currentAdSpend > 0)
+      ? operatingCosts.currentAdSpend
+      : Math.round(sales * adPct / 100);
     const pf = Math.round(sales * pfPct / 100);
     const ship = ords * shipPerOrder;
     const profit = sales - ad - pf - ship - fixedCost;
@@ -1473,8 +1477,8 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     return { ad, pf, ship, profit, margin };
   };
 
-  const curProfit = calcProfit(currentSales, 5000);
-  const tgtProfit = calcProfit(finalSales, 5000);
+  const curProfit = calcProfit(currentSales, true);
+  const tgtProfit = calcProfit(finalSales, false);
 
   // 比較カード2枚
   [
@@ -1729,7 +1733,8 @@ export default function App() {
     shippingCost: 500,
     platformFeePercent: 5,
     operationalCostFixed: 100000,
-     aov: 5000,  
+    aov: 5000,
+    currentAdSpend: 0,
   });
   
   const [formData, setFormData] = useState({
@@ -1859,12 +1864,15 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
 
   const handleKPIChange = (e) => {
     const { name, value } = e.target;
-    setKpiData(prev => ({ 
-      ...prev, 
-      [name]: name === 'initialCVR' 
-        ? parseFloat(value) / 100 
-        : parseInt(value) || 0 
+    setKpiData(prev => ({
+      ...prev,
+      [name]: name === 'initialCVR'
+        ? parseFloat(value) / 100
+        : parseInt(value) || 0
     }));
+    if (name === 'initialAOV') {
+      setOperatingCosts(prev => ({ ...prev, aov: parseInt(value) || 5000 }));
+    }
   };
 
   const handleOperatingCostsChange = (e) => {
@@ -2075,7 +2083,13 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
 1. ユーザーが入力したURLが「店舗トップページ（ショップ全体）」の場合、商品が多数並んでいるため、価格やレビューが複数存在します。
 2. その場合、【絶対に「1.3〜4.25」のような範囲で答えたり、「商品ごとにばらつきあり」といった言い訳をしてはいけません】。必ず、ショップ全体の評価、または主力商品の代表的な数値を【ズバリ1つだけ（例：4.82）】選んで出力してください。
 3. 提供される【システム事前抽出データ】と【読み込んだページの内容】を両方確認し、実際に存在する事実の数値だけを出力してください。どうしても事実が見当たらない、完全にゼロであると確信した場合のみ「評価なし」や「0件」と出力し、勝手な捏造は絶対にしないでください。
-4. 【事前ヒアリング・特記事項】が入力されている場合、その内容（現在の悩み、商品の強み、伸ばしたい部分など）を【最重要視】し、それを解決または最大化するための課題抽出と施策立案を優先的に行ってください。
+4. 【事前ヒアリング・特記事項】が入力されている場合、その内容を【最重要視】し、提案全体の方向性・課題抽出・施策立案を完全にそれに沿わせてください。
+   ・補助金・事業計画書目的の場合 → 数値根拠・成長ストーリー・社会的意義を前面に出した提案構成にしてください
+   ・BtoB/卸展開目的の場合 → 法人顧客獲得施策・まとめ買い設計・信頼性構築を中心に立案してください
+   ・新規獲得強化目的の場合 → アクセス施策・広告ROI・AIEO対策を優先してください
+   ・LTV/リピート強化目的の場合 → 同梱設計・LINE・定期購入施策を優先してください
+   ・ヒアリング内容に挙がった課題は必ず currentIssues に含め、その解決策を proposedSolutions の上位に配置すること。
+   ・thought_process には「ヒアリング内容をどのように施策に落とし込んだか」を必ず明記すること。
 5. 抽出する課題や施策、シミュレーションの要因は、誰が見ても納得できるよう【プロの視点で詳細かつ具体的に（各項目80〜150文字程度で深く）】言語化してください。短く表面的な指摘は評価を下げます。
 
 【楽天EC専門知識フレームワーク（2026年最新版・必ず施策立案に反映）】
@@ -2251,7 +2265,7 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
     setPptxError('');
     setIsGeneratingPptx(true);
     try {
-      await generatePptx(analysisResult, formData, genreStats, formatCurrency, getGenreInsight);
+      await generatePptx(analysisResult, formData, genreStats, formatCurrency, getGenreInsight, operatingCosts);
     } catch (e) {
       console.error(e);
       setPptxError(`資料の生成に失敗しました: ${e.message}`);
@@ -2297,13 +2311,28 @@ const handleExportCSV = () => {
 
   // 【新機能UI】ROI分析セクション
   const renderROIAnalysis = (currentSales, finalSales) => {
-    const currentProfit = calculateProfitMargin(currentSales, operatingCosts, 'mid');
+    const baseCurrentProfit = calculateProfitMargin(currentSales, operatingCosts, 'mid');
     const projectedProfit = calculateProfitMargin(finalSales, operatingCosts, 'mid');
 
-    // 【修正】数値をそのまま計算して渡すように変更
+    // 実際の広告費が入力されている場合はそちらを優先
+    const hasActualAdSpend = operatingCosts.currentAdSpend > 0;
+    const effectiveAdSpend = hasActualAdSpend
+      ? operatingCosts.currentAdSpend
+      : baseCurrentProfit.adSpend;
+    const effectiveNetProfit = currentSales
+      - effectiveAdSpend
+      - baseCurrentProfit.platformFee
+      - baseCurrentProfit.shippingCost
+      - baseCurrentProfit.totalOperatingCost;
+    const currentProfit = {
+      ...baseCurrentProfit,
+      adSpend: effectiveAdSpend,
+      netProfit: effectiveNetProfit,
+    };
+
     const currentROI = currentProfit.adSpend > 0 ? {
       roi: (currentProfit.netProfit / currentProfit.adSpend) * 100,
-      roasMultiplier: currentProfit.sales / currentProfit.adSpend
+      roasMultiplier: currentSales / currentProfit.adSpend
     } : null;
 
     const projectedROI = projectedProfit.adSpend > 0 ? {
@@ -2734,10 +2763,24 @@ const handleExportCSV = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="border border-slate-200 p-6 rounded-2xl bg-slate-50">
-                      <p className="text-sm font-bold text-slate-600 mb-6 flex items-center gap-2">💰 広告支出額（売上対比%）</p>
+                      <p className="text-sm font-bold text-slate-600 mb-6 flex items-center gap-2">💰 広告支出額</p>
                       <div className="space-y-4">
                         <div>
-                          <label className="text-xs font-bold text-slate-500 mb-2 block">最小値（保守的シナリオ）</label>
+                          <label className="text-xs font-bold text-slate-500 mb-2 block">現在の広告費実績/月 <span className="text-slate-400 font-normal">（入力するとROIに反映）</span></label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">¥</span>
+                            <input
+                              type="number"
+                              name="currentAdSpend"
+                              value={operatingCosts.currentAdSpend || ''}
+                              onChange={handleOperatingCostsChange}
+                              placeholder="0（空白＝%で自動計算）"
+                              className="w-full pl-8 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-pink-200 outline-none font-bold"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-500 mb-2 block">シナリオ最小値（保守的）</label>
                           <div className="relative">
                             <input
                               type="number"
@@ -2751,7 +2794,7 @@ const handleExportCSV = () => {
                           </div>
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-slate-500 mb-2 block">最大値（積極的シナリオ）</label>
+                          <label className="text-xs font-bold text-slate-500 mb-2 block">シナリオ最大値（積極的）</label>
                           <div className="relative">
                             <input
                               type="number"
