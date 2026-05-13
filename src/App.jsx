@@ -459,136 +459,37 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   };
 
   // ════════════════════════════════════════════════════════
-  // SLIDE 1: 表紙（新デザイン - 白背景＋ティールアーク＋Pure Flatロゴ）
+  // SLIDE 1: 表紙（SECTION_BG ベース - 会社名＋タイトルのみ変更）
   // ════════════════════════════════════════════════════════
   const s1 = pres.addSlide();
   s1.background = { color: C.white };
+  addSectionCover(s1);
 
-  // === 右上ティールアーク（二重クレセント） ===
-  s1.addShape(pres.shapes.OVAL, {
-    x: 7.6, y: -2.0, w: 5.2, h: 5.2,
-    fill: { color: C.teal }, line: { color: C.teal, width: 0 }
-  });
-  s1.addShape(pres.shapes.OVAL, {
-    x: 8.5, y: -1.0, w: 4.0, h: 4.0,
-    fill: { color: C.white }, line: { color: C.white, width: 0 }
-  });
-  s1.addShape(pres.shapes.OVAL, {
-    x: 9.1, y: -0.3, w: 3.0, h: 3.0,
-    fill: { color: C.teal }, line: { color: C.teal, width: 0 }
-  });
-  s1.addShape(pres.shapes.OVAL, {
-    x: 9.8, y: 0.4, w: 2.2, h: 2.2,
-    fill: { color: C.white }, line: { color: C.white, width: 0 }
-  });
-
-  // === 左下ティールアーク（二重クレセント） ===
-  s1.addShape(pres.shapes.OVAL, {
-    x: -2.8, y: 3.4, w: 5.2, h: 5.2,
-    fill: { color: C.teal }, line: { color: C.teal, width: 0 }
-  });
-  s1.addShape(pres.shapes.OVAL, {
-    x: -1.9, y: 4.3, w: 4.0, h: 4.0,
-    fill: { color: C.white }, line: { color: C.white, width: 0 }
-  });
-  s1.addShape(pres.shapes.OVAL, {
-    x: -1.3, y: 4.9, w: 3.0, h: 3.0,
-    fill: { color: C.teal }, line: { color: C.teal, width: 0 }
-  });
-  s1.addShape(pres.shapes.OVAL, {
-    x: -0.6, y: 5.6, w: 2.2, h: 2.2,
-    fill: { color: C.white }, line: { color: C.white, width: 0 }
-  });
-
-  // === ドットグリッド（右中央） ===
-  {
-    const dotColor = 'CBD5E1';
-    const dotX0 = 6.1, dotY0 = 1.7;
-    const dotCols = 7, dotRows = 5, dotSpacing = 0.38;
-    for (let r = 0; r < dotRows; r++) {
-      for (let c = 0; c < dotCols; c++) {
-        s1.addShape(pres.shapes.OVAL, {
-          x: dotX0 + c * dotSpacing, y: dotY0 + r * dotSpacing,
-          w: 0.07, h: 0.07,
-          fill: { color: dotColor }, line: { color: dotColor, width: 0 }
-        });
-      }
-    }
-  }
-
-  // === 会社名（左上・受取人） ===
+  // 会社名（左上）
   s1.addText(`${companyName} 御中`, {
-    x: 0.7, y: 0.32, w: 5.8, h: 0.34,
-    fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: false, margin: 0
+    x: 0.50, y: 0.30, w: 5.5, h: 0.32,
+    fontSize: 11, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 0
   });
   s1.addShape(pres.shapes.RECTANGLE, {
-    x: 0.7, y: 0.67, w: 5.8, h: 0.025,
+    x: 0.50, y: 0.63, w: 5.5, h: 0.02,
     fill: { color: C.dark }, line: { color: C.dark, width: 0 }
   });
 
-  // === Pure Flat ロゴ（左中央） ===
-  s1.addShape(pres.shapes.RECTANGLE, {
-    x: 0.70, y: 3.10, w: 0.68, h: 0.52,
-    fill: { color: C.teal }, line: { color: C.teal, width: 0 }, rectRadius: 0.10
-  });
-  s1.addShape(pres.shapes.RECTANGLE, {
-    x: 1.00, y: 3.38, w: 0.68, h: 0.52,
-    fill: { color: '22C55E' }, line: { color: '22C55E', width: 0 }, rectRadius: 0.10
-  });
-  s1.addText('Pure Flat', {
-    x: 1.82, y: 3.16, w: 2.8, h: 0.46,
-    fontSize: 17, fontFace: fontEN, color: C.dark, bold: true, margin: 0, valign: 'middle'
-  });
-
-  // === メインタイトル ===
+  // メインタイトル（ティール大文字）
   s1.addText('EC売上改善 提案書', {
-    x: 0.7, y: 1.5, w: 5.6, h: 1.05,
-    fontSize: 36, fontFace: fontJP, lang: 'ja-JP', color: C.teal, bold: true, margin: 0
+    x: 1.70, y: 2.10, w: 5.5, h: 0.85,
+    fontSize: 38, fontFace: fontJP, lang: 'ja-JP', color: C.teal, bold: true, margin: 0
   });
   s1.addShape(pres.shapes.RECTANGLE, {
-    x: 0.7, y: 2.60, w: 5.6, h: 0.05,
+    x: 1.70, y: 3.00, w: 5.5, h: 0.04,
     fill: { color: C.teal }, line: { color: C.teal, width: 0 }
   });
   if (hc.customProposalTitle) {
     s1.addText(hc.customProposalTitle, {
-      x: 0.7, y: 2.70, w: 5.6, h: 0.24,
-      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, italic: true, margin: 0
+      x: 1.70, y: 3.10, w: 5.5, h: 0.28,
+      fontSize: 11, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, italic: true, margin: 0
     });
   }
-
-  // === 日付・ジャンル情報 ===
-  s1.addText(`ジャンル: ${genreName}　　現在月商: ${formatCurrency(currentSales)}　　作成日: ${new Date().toLocaleDateString('ja-JP')}`, {
-    x: 0.7, y: 4.22, w: 5.8, h: 0.26,
-    fontSize: 9, fontFace: fontJP, lang: 'ja-JP', color: C.slate, margin: 0
-  });
-
-  // === 1年後目標ボックス ===
-  s1.addShape(pres.shapes.RECTANGLE, {
-    x: 0.7, y: 4.55, w: 2.8, h: 0.85,
-    fill: { color: C.teal }, line: { color: C.teal, width: 0 }, rectRadius: 0.12
-  });
-  s1.addText('1年後目標月商', {
-    x: 0.85, y: 4.62, w: 2.5, h: 0.24,
-    fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.tealLight, bold: true, margin: 0
-  });
-  s1.addText(formatCurrency(finalSales), {
-    x: 0.85, y: 4.84, w: 2.5, h: 0.44,
-    fontSize: 20, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
-  });
-
-  // === 現状比ボックス ===
-  s1.addShape(pres.shapes.RECTANGLE, {
-    x: 3.65, y: 4.55, w: 1.85, h: 0.85,
-    fill: { color: C.tealBg }, line: { color: C.tealLight, width: 1.5 }, rectRadius: 0.12
-  });
-  s1.addText('現状比', {
-    x: 3.75, y: 4.62, w: 1.65, h: 0.24,
-    fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: true, margin: 0
-  });
-  s1.addText(`+${growthRate}%`, {
-    x: 3.75, y: 4.84, w: 1.65, h: 0.44,
-    fontSize: 20, fontFace: fontEN, color: C.tealDark, bold: true, margin: 0
-  });
 
   // ════════════════════════════════════════════════════════
   // SLIDE 2: 商品・現状サマリー
