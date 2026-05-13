@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import PptxGenJS from 'pptxgenjs';
 import { 
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import { 
   Upload, Settings, Play, TrendingUp, AlertCircle, CheckCircle2, 
-  FileSpreadsheet, Link as LinkIcon, Search, Building2, ChevronRight, Activity, Database, Star, ThumbsUp, ThumbsDown, ArrowLeft, Lock, User, LogOut, CheckCircle, Calculator, TrendingDown, Info, FileDown, Loader2, MessageSquare
+  FileSpreadsheet, Link as LinkIcon, Search, Building2, ChevronRight, Activity, Database, Star, ThumbsUp, ThumbsDown, ArrowLeft, Lock, User, LogOut, CheckCircle, Calculator, TrendingDown, Info, FileDown, Loader2, MessageSquare, FileText
 } from 'lucide-react';
 
 // 正規分布に従う乱数生成（Box-Muller変換）
@@ -296,9 +296,15 @@ const handleDownloadCSV = (detailedMonthly, formData, operatingCosts) => {
 
 // PPTX生成関数（pptxgenjs npm パッケージ使用）
 const generatePptx = async (analysisResult, formData, genreStats, formatCurrency, getGenreInsight, operatingCosts = {}) => {
+  // Override formatCurrency to guarantee ASCII-only output (全角数字対策)
+  formatCurrency = (val) => {
+    const n = Math.round(Number(val) || 0);
+    return '¥' + n.toLocaleString('en-US');
+  };
   const pres = new PptxGenJS();
   pres.layout = 'LAYOUT_16x9';
   pres.title = `EC売上改善提案書 - ${formData.companyName || '対象店舗'}`;
+  pres.theme = { headFontFace: 'BIZ UDPGothic', bodyFontFace: 'BIZ UDPGothic' };
 
   // ── カラーパレット (資料ベース.pptx 準拠 / Pure Flat ブランド) ──
   const C = {
@@ -332,8 +338,9 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     gradStart:  '53BEB1',
     gradEnd:    '3DAA9D',
   };
-  const fontJP = 'Noto Sans CJK JP';
+  const fontJP = 'BIZ UDPGothic';
   const fontEN = 'Arial';
+  const hc = analysisResult.hearingCustomization || {};
 
   const companyName = formData.companyName || '対象店舗';
   const genreName   = formData.genre || 'EC';
@@ -386,7 +393,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     const titleFontSize = title.length > 24 ? 20 : title.length > 18 ? 24 : 28;
     slide.addText(title, {
       x: 0.45, y: 0.04, w: 8.8, h: 0.60,
-      fontSize: titleFontSize, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0,
+      fontSize: titleFontSize, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, valign: 'middle', margin: 0,
       outline: { color: '003344', size: 1.5 }
     });
     if (num) addFooter(slide, num);
@@ -404,7 +411,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     slide.addText(text, {
       x: 0.50, y: 0.71, w: 9.05, h: 0.48,
-      fontSize: 13, fontFace: fontJP, color: C.tealDark, bold: false, margin: 4, align: 'left', valign: 'middle'
+      fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: false, margin: 4, align: 'left', valign: 'middle'
     });
   };
 
@@ -416,7 +423,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     slide.addText(text, {
       x: x + 0.05, y: y + 0.02, w: text.length * 0.13 + 0.3, h: 0.26,
-      fontSize: 13, fontFace: fontJP, color: textColor, bold: true, align: 'center', margin: 0
+      fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: textColor, bold: true, align: 'center', margin: 0
     });
   };
 
@@ -436,17 +443,17 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     }
     slide.addText(label, {
       x: x + 0.15, y: y + 0.15, w: w - 0.3, h: 0.25,
-      fontSize: 13, fontFace: fontJP, color: C.slateLight, bold: true, margin: 0
+      fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.slateLight, bold: true, margin: 0
     });
     slide.addText(value, {
       x: x + 0.1, y: y + 0.38, w: w - 0.2, h: 0.55,
-      fontSize: accent ? 17 : 15, fontFace: fontJP,
+      fontSize: accent ? 17 : 15, fontFace: fontJP, lang: 'ja-JP',
       color: accent ? C.tealDark : C.dark, bold: true, margin: 0
     });
     if (sub) {
       slide.addText(sub, {
         x: x + 0.15, y: y + 0.9, w: w - 0.3, h: 0.22,
-        fontSize: 8, fontFace: fontJP, color: accent ? C.tealMid : C.slateLight, bold: accent, margin: 0
+        fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: accent ? C.tealMid : C.slateLight, bold: accent, margin: 0
       });
     }
   };
@@ -463,27 +470,34 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   // テキストコンテンツ（左側）
   s1.addText('楽天市場', {
     x: 0.7, y: 1.1, w: 4.0, h: 0.38,
-    fontSize: 13, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: true, margin: 0
   });
   s1.addText('EC売上改善 提案書', {
     x: 0.7, y: 1.5, w: 4.5, h: 0.95,
-    fontSize: 34, fontFace: fontJP, color: C.dark, bold: true, margin: 0
+    fontSize: 34, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 0
   });
   s1.addText(companyName, {
     x: 0.7, y: 2.55, w: 4.5, h: 0.6,
-    fontSize: 24, fontFace: fontJP, color: C.teal, bold: true, margin: 0
+    fontSize: 24, fontFace: fontJP, lang: 'ja-JP', color: C.teal, bold: true, margin: 0
   });
+  if (hc.customProposalTitle) {
+    s1.addText(hc.customProposalTitle, {
+      x: 0.7, y: 3.16, w: 4.5, h: 0.22,
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, italic: true, margin: 0
+    });
+  }
+  const _titleOffset = hc.customProposalTitle ? 0.2 : 0;
   s1.addShape(pres.shapes.RECTANGLE, {
-    x: 0.7, y: 3.28, w: 3.5, h: 0.04,
+    x: 0.7, y: 3.28 + _titleOffset, w: 3.5, h: 0.04,
     fill: { color: C.tealLight }, line: { color: C.tealLight, width: 0 }
   });
   s1.addText(`ジャンル: ${genreName}`, {
-    x: 0.7, y: 3.42, w: 4.5, h: 0.28,
-    fontSize: 10, fontFace: fontJP, color: C.slate, margin: 0
+    x: 0.7, y: 3.42 + _titleOffset, w: 4.5, h: 0.28,
+    fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.slate, margin: 0
   });
   s1.addText(`現在月商: ${formatCurrency(currentSales)}　　作成日: ${new Date().toLocaleDateString('ja-JP')}`, {
-    x: 0.7, y: 3.7, w: 4.5, h: 0.28,
-    fontSize: 10, fontFace: fontJP, color: C.slate, margin: 0
+    x: 0.7, y: 3.7 + _titleOffset, w: 4.5, h: 0.28,
+    fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.slate, margin: 0
   });
   // 1年後目標ボックス
   s1.addShape(pres.shapes.RECTANGLE, {
@@ -492,11 +506,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s1.addText('1年後目標月商', {
     x: 0.85, y: 4.18, w: 2.5, h: 0.26,
-    fontSize: 13, fontFace: fontJP, color: C.tealLight, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealLight, bold: true, margin: 0
   });
   s1.addText(formatCurrency(finalSales), {
     x: 0.85, y: 4.43, w: 2.5, h: 0.52,
-    fontSize: 20, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 20, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
   // 現状比ボックス
   s1.addShape(pres.shapes.RECTANGLE, {
@@ -505,7 +519,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s1.addText('現状比', {
     x: 3.75, y: 4.18, w: 1.65, h: 0.26,
-    fontSize: 13, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: true, margin: 0
   });
   s1.addText(`+${growthRate}%`, {
     x: 3.75, y: 4.43, w: 1.65, h: 0.52,
@@ -520,7 +534,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s2 = pres.addSlide();
   s2.background = { color: C.white };
   addSlideHeader(s2, 1, '貴社・商品の現状サマリー', `${companyName} / ${genreName}`);
-  addSlideSummary(s2, `${companyName}（${genreName}）の現在月商${formatCurrency(currentSales)}から目標${formatCurrency(targetSales)}へ。商品・評価・ページ情報を整理し、課題特定と施策設計の起点を明確にします。`);
+  addSlideSummary(s2, hc.s2Summary || `${companyName}（${genreName}）の現在月商${formatCurrency(currentSales)}から目標${formatCurrency(targetSales)}へ。商品・評価・ページ情報を整理し、課題特定と施策設計の起点を明確にします。`);
 
   // 左カラム：商品情報
   s2.addShape(pres.shapes.RECTANGLE, {
@@ -533,7 +547,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s2.addText('企業・商品情報', {
     x: 0.5, y: 1.30, w: 4.3, h: 0.40,
-    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, valign: 'middle', margin: 0
   });
   const qd = analysisResult.quantitativeData || {};
   const infoLines = [
@@ -554,11 +568,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s2.addText(row.lbl, {
       x: 0.5, y: ry + 0.08, w: 1.4, h: 0.28,
-      fontSize: 11.5, fontFace: fontJP, color: C.slateLight, bold: true, margin: 0
+      fontSize: 11.5, fontFace: fontJP, lang: 'ja-JP', color: C.slateLight, bold: true, margin: 0
     });
     s2.addText(row.val, {
       x: 1.95, y: ry + 0.05, w: 2.85, h: 0.34,
-      fontSize: 13, fontFace: fontJP, color: C.dark, bold: true, margin: 0
+      fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 0
     });
   });
 
@@ -570,7 +584,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const ratingVal = parseFloat(qd.averageRating) || 0;
   s2.addText('⭐ 平均評価スコア', {
     x: 5.4, y: 1.38, w: 4.1, h: 0.28,
-    fontSize: 13, fontFace: fontJP, color: C.amber, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.amber, bold: true, margin: 0
   });
   s2.addText(`${ratingVal > 0 ? ratingVal.toFixed(2) : '—'}`, {
     x: 5.4, y: 1.55, w: 1.8, h: 0.6,
@@ -586,7 +600,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   }
   s2.addText(`/ 5.00  レビュー${qd.reviews || '0'}`, {
     x: 5.4, y: 2.08, w: 4.1, h: 0.25,
-    fontSize: 13, fontFace: fontJP, color: C.slateLight, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.slateLight, margin: 0
   });
 
   s2.addShape(pres.shapes.RECTANGLE, {
@@ -595,11 +609,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s2.addText('📋  商品・ページ概要', {
     x: 5.4, y: 3.0, w: 4.1, h: 0.28,
-    fontSize: 13, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: true, margin: 0
   });
   s2.addText(analysisResult.productInfo || '商品情報の詳細', {
     x: 5.4, y: 3.32, w: 4.1, h: 1.85,
-    fontSize: 10, fontFace: fontJP, color: C.dark, margin: 3, align: 'left', valign: 'top'
+    fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 3, align: 'left', valign: 'top'
   });
   addFooter(s2, 1);
 
@@ -624,7 +638,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s3.addText('✅  強み（数値根拠）', {
     x: 0.5, y: 1.35, w: 4.2, h: 0.38,
-    fontSize: 14, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 14, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
   goodPoints.slice(0, 4).forEach((pt, i) => {
     const py = 1.82 + i * 0.82;
@@ -642,7 +656,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s3.addText(pt, {
       x: 1.05, y: py + 0.08, w: 3.65, h: 0.58,
-      fontSize: 11.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
+      fontSize: 11.5, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
     });
   });
 
@@ -657,7 +671,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s3.addText('⚠️  改善点（優先課題）', {
     x: 5.3, y: 1.35, w: 4.2, h: 0.38,
-    fontSize: 14, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 14, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
   badPoints.slice(0, 4).forEach((pt, i) => {
     const py = 1.82 + i * 0.82;
@@ -675,7 +689,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s3.addText(pt, {
       x: 5.85, y: py + 0.08, w: 3.65, h: 0.58,
-      fontSize: 11.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
+      fontSize: 11.5, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
     });
   });
   addFooter(s3, 2);
@@ -700,11 +714,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s4.addText(`弊社の${genreName}支援実績からの洞察`, {
     x: 0.6, y: 1.35, w: 9, h: 0.3,
-    fontSize: 13, fontFace: fontJP, color: C.tealDark, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: true, margin: 0
   });
   s4.addText(genreAnalysis, {
     x: 0.55, y: 1.52, w: 9.0, h: 1.4,
-    fontSize: 12, fontFace: fontJP, color: C.dark, margin: 3, align: 'left', valign: 'top'
+    fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 3, align: 'left', valign: 'top'
   });
 
   // 楽天セールカレンダー
@@ -714,7 +728,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s4.addText('📅  楽天市場 主要セールカレンダー（年間活用すべき重要イベント）', {
     x: 0.5, y: 3.22, w: 9, h: 0.28,
-    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
 
   const saleMonths = [
@@ -749,7 +763,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s4.addText(ev.name, {
       x: ex + 0.08, y: ey + 0.32, w: 1.62, h: 0.42,
-      fontSize: 8.5, fontFace: fontJP, color: C.dark, bold: true, align: 'center', valign: 'middle', margin: 0
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, align: 'center', valign: 'middle', margin: 0
     });
   });
   addFooter(s4, 3);
@@ -764,7 +778,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const firstIssueLabel = Array.isArray(rawIssuesPreview) && rawIssuesPreview.length > 0
     ? rawIssuesPreview[0].substring(0, 20) + '…'
     : 'アクセス不足';
-  addSlideSummary(s5, `解析の結果、①${firstIssueLabel}を中心とするアクセス不足と②CVR低下の2軸が主要課題です。この解消が${companyName}の売上V字回復への最短経路となります。`);
+  addSlideSummary(s5, hc.s5Summary || `解析の結果、①${firstIssueLabel}を中心とするアクセス不足と②CVR低下の2軸が主要課題です。この解消が${companyName}の売上V字回復への最短経路となります。`);
 
   // 中央フロー矢印
   s5.addShape(pres.shapes.RECTANGLE, {
@@ -773,7 +787,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s5.addText('課\n題\n整\n理', {
     x: 4.72, y: 2.3, w: 0.56, h: 1.8,
-    fontSize: 10, fontFace: fontJP, color: C.slateLight, bold: true, align: 'center', valign: 'middle', margin: 0
+    fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.slateLight, bold: true, align: 'center', valign: 'middle', margin: 0
   });
 
   // ── アクセス課題（左列）──
@@ -783,7 +797,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s5.addText('📊  アクセス数不足の課題', {
     x: 0.45, y: 1.31, w: 4.0, h: 0.35,
-    fontSize: 12, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
 
   const rawIssues = analysisResult.currentIssues || [];
@@ -807,7 +821,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s5.addText(issue, {
       x: 1.0, y: iy + 0.08, w: 3.52, h: 0.86,
-      fontSize: 11.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
+      fontSize: 11.5, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
     });
   });
 
@@ -818,7 +832,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s5.addText('🔄  転換率（CVR）低下の課題', {
     x: 5.55, y: 1.31, w: 4.0, h: 0.35,
-    fontSize: 12, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
 
   const rawCvrIssues = Array.isArray(rawIssues)
@@ -850,7 +864,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s5.addText(issue, {
       x: 6.1, y: iy + 0.08, w: 3.52, h: 0.86,
-      fontSize: 11.5, fontFace: fontJP, color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
+      fontSize: 11.5, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 2, align: 'left', valign: 'top'
     });
   });
   addFooter(s5, 4);
@@ -861,7 +875,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s6 = pres.addSlide();
   s6.background = { color: C.white };
   addSlideHeader(s6, 5, 'アクセス数の増加（舟瀬式）', '楽天絞込ハック／Yahoo!優良配送／CTR特化／AIEO×外部流入');
-  addSlideSummary(s6, '弊社独自の舟瀬式メソッドでアクセス数を最大化します。楽天絞込ハック・AIEO対策・外部SNS流入の複合施策により、平均3〜8倍の流入増を実現しています。');
+  addSlideSummary(s6, hc.s6Summary || '弊社独自の舟瀬式メソッドでアクセス数を最大化します。楽天絞込ハック・AIEO対策・外部SNS流入の複合施策により、平均3〜8倍の流入増を実現しています。');
 
   // 施策4カード（舟瀬式ナレッジベース：楽天・Yahoo!両対応のアクセス戦略）
   const accessStrategies = [
@@ -869,25 +883,25 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       icon: '🔎', title: '楽天：絞り込みハック × 属性100%埋込',
       body: '絞り込み行動を先読みし、属性100%埋込＋サジェストKW注入でニッチ独占状態を構築。サーチ申請×限定SALEで新規流入最大8倍の実績あり。',
       kpi: '絞り込み検索順位＆CVR',
-      action: '楽天RMS｜商品属性100%埋込｜即日完了'
+      action: '楽天RMS｜即日完了'
     },
     {
       icon: '🚚', title: 'Yahoo!：優良配送認定 × アイテムマッチ広告',
       body: '優良配送認定で検索露出を優先確保し、アイテムマッチ広告でレコメンド枠へ強制露出。LINEヤフー統合13.6%成長市場の追い風をフル活用。',
-      kpi: 'アイテムマッチROAS＆レコメンド占有率',
-      action: 'ストアクリエイターPro｜優良配送設定｜1週間以内'
+      kpi: 'ROAS＆レコメンド占有率',
+      action: 'ストアPro｜1週間以内'
     },
     {
       icon: '🖼️', title: 'メイン画像CTR特化 × LINE小画面対応',
       body: '0.1秒で指を止めるサムネイル設計。LINEの小画面でも視認できる大文字訴求を徹底し、画像ABテストで検索CTRを最大35%改善。',
       kpi: 'CTR +20〜35%',
-      action: '画像1枚目ABテスト｜最新トレンド反映｜3日以内'
+      action: '画像ABテスト｜3日以内'
     },
     {
       icon: '🌐', title: 'AIEO × 外部流入によるランク自動上昇',
       body: 'KW詰込SEOは終焉。レビュー具体性蓄積＋外部SNS流入でAI推奨枠を獲得し、RPP依存から広告費ゼロの自走型成長サイクルへ転換。',
-      kpi: 'オーガニック流入 +30〜50%',
-      action: '商品紹介1行目にレビューKW採用｜当日実行'
+      kpi: '流入 +30〜50%',
+      action: 'レビューKW採用｜当日実行'
     },
   ];
 
@@ -907,11 +921,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s6.addText(`${st.icon}  ${st.title}`, {
       x: sx + 0.12, y: sy + 0.04, w: 4.35, h: 0.32,
-      fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
+      fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
     });
     s6.addText(st.body, {
       x: sx + 0.12, y: sy + 0.46, w: 4.35, h: 0.78,
-      fontSize: 10, fontFace: fontJP, color: C.dark, margin: 2, align: 'left', valign: 'top'
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 2, align: 'left', valign: 'top'
     });
     // KPIバッジ
     s6.addShape(pres.shapes.RECTANGLE, {
@@ -920,7 +934,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s6.addText(`📈 ${st.kpi}`, {
       x: sx + 0.15, y: sy + 1.3, w: 2.14, h: 0.19,
-      fontSize: 7.5, fontFace: fontJP, color: C.white, bold: true, margin: 0
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
     });
     // 即時アクションバッジ
     s6.addShape(pres.shapes.RECTANGLE, {
@@ -929,7 +943,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s6.addText(`⚡ ${st.action}`, {
       x: sx + 2.43, y: sy + 1.3, w: 2.09, h: 0.19,
-      fontSize: 7, fontFace: fontJP, color: C.white, bold: true, margin: 0
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
     });
   });
 
@@ -938,9 +952,9 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     x: 0.3, y: 5.1, w: 9.4, h: 0.25,
     fill: { color: C.tealDark }, line: { color: C.tealDark }, rectRadius: 0.06
   });
-  s6.addText('舟瀬式：楽天絞込ハック＋Yahoo!優良配送＋AIEOレビューKW注入＋外部流入フライホイール。広告依存しない自走型アクセス基盤を構築。', {
+  s6.addText(hc.accessBarNote || '舟瀬式：楽天絞込ハック＋Yahoo!優良配送＋AIEOレビューKW注入＋外部流入フライホイール。広告依存しない自走型アクセス基盤を構築。', {
     x: 0.5, y: 5.12, w: 9, h: 0.2,
-    fontSize: 8.5, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
   addFooter(s6, 5);
 
@@ -950,32 +964,32 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s7 = pres.addSlide();
   s7.background = { color: C.white };
   addSlideHeader(s7, 6, '転換率(CVR)の向上（舟瀬式）', 'カゴ落ち94%対策／レビュー質化／ギフト3恐怖排除／回遊×LTV');
-  addSlideSummary(s7, 'カゴ落ち率94%の改善を核心に、レビュー質化・LTV設計の3本柱で転換率（CVR）を引き上げます。CVRが1%改善するだけで月商は大幅に増加します。');
+  addSlideSummary(s7, hc.s7Summary || 'カゴ落ち率94%の改善を核心に、レビュー質化・LTV設計の3本柱で転換率（CVR）を引き上げます。CVRが1%改善するだけで月商は大幅に増加します。');
 
   const cvrStrategies = [
     {
       icon: '🛒', title: 'カゴ落ち94%対策 × 決済摩擦ゼロ設計',
       body: '94%が離脱するカートの穴を塞ぐ。送料無料ライン・配送日をカート内で即明示し、ID決済（楽天ペイ等）導入で決済クリック数を半減。',
       kpi: 'カート放棄率 -15〜25%',
-      action: '自社カート画面を自分で触る｜当日修正'
+      action: 'カート画面確認｜当日'
     },
     {
       icon: '⭐', title: 'レビュー質化（AI意味解析対策）',
       body: '件数より文脈が検索順位に直結する時代。星5レビューKWで商品名リライト＋サンクスメールでAI学習KWを自然誘導。低評価への真摯な公開返信も転換率を向上。',
-      kpi: 'レビューKW出現率＆自然検索流入',
-      action: '星5レビューKWで商品名リライト｜当日実行'
+      kpi: 'レビューKW＆自然流入',
+      action: '商品名リライト｜当日'
     },
     {
       icon: '🎁', title: 'ギフト3恐怖の排除（客単価+10%）',
       body: '「届かない・ボロボロ・値段バレ」3恐怖を先回り排除。ラッピング無料＋「金額明細なし」を決済ボタン直上に大表示し、ギフトCVRを大幅改善。',
-      kpi: 'ギフトKW経由CVR＆星5率',
-      action: 'のし/ラッピング無料設定＋画像追加｜3日以内'
+      kpi: 'ギフトCVR＆星5率',
+      action: 'ラッピング設定｜3日以内'
     },
     {
       icon: '🔄', title: '回遊バナー × LTV同梱設計',
       body: '決済ボタン上下に売れ筋ベスト3バナーを設置して回遊を促進。同梱物（次回クーポン）で2回目購入率を最大化し、広告ゼロのリピーター基盤を構築。',
-      kpi: '客単価＋10%／リピート＋25〜40%',
-      action: '決済ボタン上下に回遊バナー設置｜当日実行'
+      kpi: '客単価+10%/リピート+25%',
+      action: '回遊バナー設置｜当日'
     },
   ];
 
@@ -995,11 +1009,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s7.addText(`${st.icon}  ${st.title}`, {
       x: sx + 0.12, y: sy + 0.04, w: 4.35, h: 0.32,
-      fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
+      fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
     });
     s7.addText(st.body, {
       x: sx + 0.12, y: sy + 0.46, w: 4.35, h: 0.78,
-      fontSize: 10, fontFace: fontJP, color: C.dark, margin: 2, align: 'left', valign: 'top'
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 2, align: 'left', valign: 'top'
     });
     s7.addShape(pres.shapes.RECTANGLE, {
       x: sx + 0.12, y: sy + 1.28, w: 2.2, h: 0.22,
@@ -1007,7 +1021,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s7.addText(`📈 ${st.kpi}`, {
       x: sx + 0.15, y: sy + 1.3, w: 2.14, h: 0.19,
-      fontSize: 7.5, fontFace: fontJP, color: C.white, bold: true, margin: 0
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
     });
     s7.addShape(pres.shapes.RECTANGLE, {
       x: sx + 2.4, y: sy + 1.28, w: 2.15, h: 0.22,
@@ -1015,7 +1029,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s7.addText(`⚡ ${st.action}`, {
       x: sx + 2.43, y: sy + 1.3, w: 2.09, h: 0.19,
-      fontSize: 7, fontFace: fontJP, color: C.white, bold: true, margin: 0
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
     });
   });
 
@@ -1024,9 +1038,9 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     x: 0.3, y: 5.1, w: 9.4, h: 0.25,
     fill: { color: C.tealDark }, line: { color: C.tealDark }, rectRadius: 0.06
   });
-  s7.addText('舟瀬式：カゴ落ち94%対策＋レビュー質化（AI意味解析）＋ギフト3恐怖排除＋回遊×LTV。広告費ゼロで売上を伸ばす王道の4点セット。', {
+  s7.addText(hc.cvrBarNote || '舟瀬式：カゴ落ち94%対策＋レビュー質化（AI意味解析）＋ギフト3恐怖排除＋回遊×LTV。広告費ゼロで売上を伸ばす王道の4点セット。', {
     x: 0.5, y: 5.12, w: 9, h: 0.2,
-    fontSize: 8.5, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
   addFooter(s7, 6);
 
@@ -1036,7 +1050,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   const s8 = pres.addSlide();
   s8.background = { color: C.white };
   addSlideHeader(s8, 7, '施策ロードマップ　12ヶ月計画', '課題解決から成果刈り取りまでの全体スケジュール');
-  addSlideSummary(s8, '12ヶ月を3フェーズに分け、施策の優先順位と実施タイミングを明確化します。フェーズごとに成果を積み上げることで、確実に目標月商を達成します。');
+  addSlideSummary(s8, hc.s8Summary || '12ヶ月を3フェーズに分け、施策の優先順位と実施タイミングを明確化します。フェーズごとに成果を積み上げることで、確実に目標月商を達成します。');
 
   // フェーズヘッダー
   const phases = [
@@ -1059,7 +1073,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s8.addText(`${ph.sub}（${ph.range}）`, {
       x: px + 0.1, y: 1.48, w: 2.02, h: 0.28,
-      fontSize: 8.5, fontFace: fontJP, color: textClr, margin: 0
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: textClr, margin: 0
     });
   });
 
@@ -1081,14 +1095,14 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   // 施策ロウ
   const roadmapItems = [
     { cat: 'アクセス施策', color: C.blue,
-      ph1: 'AIEO属性100%入力\nメイン画像CTR特化設計',
-      ph2: 'サーチ申請×限定SALE\n外部SNS誘導フロー構築',
+      ph1: hc.roadmapP1Access || 'AIEO属性100%入力\nメイン画像CTR特化設計',
+      ph2: hc.roadmapP2Access || 'サーチ申請×限定SALE\n外部SNS誘導フロー構築',
       ph3: '特設ページ×SALE最大化\nMeta/TikTok広告本格化',
       ph4: 'SALE連動×外部流入最大化\nAI検索自走サイクル確立'
     },
     { cat: 'CVR施策', color: C.rose,
-      ph1: '商品ページ権威訴求改修\n購入後ストーリー設計',
-      ph2: 'レビュー質化フロー構築\n同梱物LTV設計導入',
+      ph1: hc.roadmapP1CVR || '商品ページ権威訴求改修\n購入後ストーリー設計',
+      ph2: hc.roadmapP2CVR || 'レビュー質化フロー構築\n同梱物LTV設計導入',
       ph3: 'LINE×ポイントデー刈取\nギフト対応・回遊バナー設置',
       ph4: 'LTVフロー完成・リピート最大化\nRPP広告依存ゼロへ'
     },
@@ -1108,7 +1122,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s8.addText(row.cat, {
       x: 0.30, y: ry + 0.18, w: 1.20, h: 0.6,
-      fontSize: 8.5, fontFace: fontJP, color: C.white, bold: true, align: 'center', valign: 'middle', margin: 0
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, align: 'center', valign: 'middle', margin: 0
     });
     [row.ph1, row.ph2, row.ph3, row.ph4].forEach((txt, pi) => {
       const px = 1.62 + pi * 1.97;
@@ -1121,7 +1135,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       });
       s8.addText(txt, {
         x: px + 0.08, y: ry + 0.08, w: 1.72, h: 0.80,
-        fontSize: ri === 2 ? 10 : 8.5, fontFace: fontJP,
+        fontSize: 10, fontFace: fontJP, lang: 'ja-JP',
         color: isFinal ? C.tealDark : C.dark,
         bold: isFinal, margin: 2, align: 'center', valign: 'middle'
       });
@@ -1138,7 +1152,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       });
       s8.addText(`🔥 ${label}`, {
         x: mx + 0.05, y: 4.33, w: 0.9, h: 0.22,
-        fontSize: 7.5, fontFace: fontJP, color: C.white, bold: true, align: 'center', margin: 0
+        fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, align: 'center', margin: 0
       });
     }
   });
@@ -1156,11 +1170,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   // セクションタイトル（中央左）
   s9.addText('売上シミュレーション', {
     x: 0.7, y: 2.2, w: 6.0, h: 0.75,
-    fontSize: 34, fontFace: fontJP, color: C.dark, bold: true, margin: 0
+    fontSize: 34, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 0
   });
   s9.addText('モンテカルロ法1,000回試行による確率的売上予測', {
     x: 0.7, y: 3.05, w: 4.5, h: 0.35,
-    fontSize: 13, fontFace: fontJP, color: C.tealDark, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, margin: 0
   });
   s9.addShape(pres.shapes.RECTANGLE, {
     x: 0.7, y: 3.5, w: 3.5, h: 0.04,
@@ -1192,16 +1206,16 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s9b.addText(kpi.label, {
       x: kx + 0.15, y: 1.30, w: 2.75, h: 0.28,
-      fontSize: 10, fontFace: fontJP, color: kpi.dark ? C.tealLight : C.slateLight, bold: true, margin: 0
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: kpi.dark ? C.tealLight : C.slateLight, bold: true, margin: 0
     });
     s9b.addText(kpi.value, {
       x: kx + 0.1, y: 1.58, w: 2.85, h: 0.58,
-      fontSize: kpi.dark ? 20 : 18, fontFace: fontJP,
+      fontSize: kpi.dark ? 20 : 18, fontFace: fontJP, lang: 'ja-JP',
       color: kpi.dark ? C.white : C.dark, bold: true, margin: 0
     });
     s9b.addText(kpi.sub, {
       x: kx + 0.15, y: 2.18, w: 2.75, h: 0.28,
-      fontSize: 13, fontFace: fontJP, color: kpi.dark ? C.tealBg : C.slateLight, margin: 0
+      fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: kpi.dark ? C.tealBg : C.slateLight, margin: 0
     });
   });
 
@@ -1212,7 +1226,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s9b.addText('目標達成の根拠内訳（弊社支援データ連動）', {
     x: 0.5, y: 2.75, w: 9, h: 0.25,
-    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
 
   const rationaleItems = analysisResult.targetRationale?.breakdown || [
@@ -1239,11 +1253,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s9b.addText(item.label, {
       x: 1.1, y: ry + 0.13, w: 6.5, h: 0.38,
-      fontSize: 10, fontFace: fontJP, color: C.dark, bold: true, margin: 0, valign: 'middle'
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 0, valign: 'middle'
     });
     s9b.addText(`+${formatCurrency(item.value)} / 月`, {
       x: 7.7, y: ry + 0.1, w: 1.85, h: 0.42,
-      fontSize: 12, fontFace: fontJP, color: C.tealDark, bold: true, align: 'right', valign: 'middle', margin: 0
+      fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: true, align: 'right', valign: 'middle', margin: 0
     });
   });
   addFooter(s9b, 8);
@@ -1291,22 +1305,22 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       fontSize: 13, fontFace: fontEN, color: isTarget ? C.white : C.tealDark, bold: true, align: 'center', margin: 0
     });
     s11.addText(ms.label, {
-      x: mx + 0.1, y: 1.54, w: 2.02, h: 0.17,
-      fontSize: 8, fontFace: fontJP, color: isTarget ? C.tealLight : C.tealDark, align: 'center', margin: 0
+      x: mx + 0.1, y: 1.54, w: 2.02, h: 0.20,
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: isTarget ? C.tealLight : C.tealDark, align: 'center', margin: 0
     });
     s11.addText('月商予測', {
-      x: mx + 0.1, y: 1.72, w: 2.02, h: 0.22,
-      fontSize: 8.5, fontFace: fontJP, color: C.slateLight, align: 'center', margin: 0
+      x: mx + 0.1, y: 1.75, w: 2.02, h: 0.22,
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.slateLight, align: 'center', margin: 0
     });
     s11.addText(formatCurrency(ms.sales), {
       x: mx + 0.05, y: 1.93, w: 2.12, h: 0.48,
-      fontSize: isTarget ? 14 : 13, fontFace: fontJP,
+      fontSize: isTarget ? 14 : 13, fontFace: fontJP, lang: 'ja-JP',
       color: isTarget ? C.tealDark : C.dark, bold: true, align: 'center', margin: 0
     });
     const growth = ((ms.sales / currentSales - 1) * 100).toFixed(0);
     s11.addText(`現状比 +${growth}%`, {
       x: mx + 0.1, y: 2.41, w: 2.02, h: 0.22,
-      fontSize: 13, fontFace: fontJP,
+      fontSize: 13, fontFace: fontJP, lang: 'ja-JP',
       color: isTarget ? C.tealDark : C.emerald, bold: true, align: 'center', margin: 0
     });
     s11.addShape(pres.shapes.RECTANGLE, {
@@ -1315,7 +1329,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s11.addText(ms.desc, {
       x: mx + 0.1, y: 2.74, w: 2.02, h: 1.12,
-      fontSize: 8, fontFace: fontJP, color: C.slate, margin: 2, align: 'left', valign: 'top'
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.slate, margin: 2, align: 'left', valign: 'top'
     });
   });
 
@@ -1333,12 +1347,12 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s11.addText('▲  上昇要因（アップサイド）', {
     x: 0.5, y: 4.14, w: 4.25, h: 0.28,
-    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
   upsides.forEach((u, i) => {
     s11.addText(`• ${u.substring(0, 80)}${u.length > 80 ? '...' : ''}`, {
       x: 0.45, y: 4.54 + i * 0.38, w: 4.45, h: 0.34,
-      fontSize: 8.5, fontFace: fontJP, color: C.dark, margin: 2
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 2
     });
   });
 
@@ -1352,12 +1366,12 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s11.addText('▼  リスク要因（ダウンサイド）', {
     x: 5.25, y: 4.14, w: 4.25, h: 0.28,
-    fontSize: 13, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
   downsides.forEach((d, i) => {
     s11.addText(`• ${d.substring(0, 80)}${d.length > 80 ? '...' : ''}`, {
       x: 5.2, y: 4.54 + i * 0.38, w: 4.45, h: 0.34,
-      fontSize: 8.5, fontFace: fontJP, color: C.dark, margin: 2
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 2
     });
   });
   addFooter(s11, 9);
@@ -1384,20 +1398,16 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s12.addText(h, {
       x: tx + 0.02, y: 1.31, w: colWidths[i] - 0.04, h: 0.28,
-      fontSize: 8.5, fontFace: fontJP, color: C.white, bold: true, align: 'center', margin: 0
+      fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, align: 'center', margin: 0
     });
   });
 
-  // 月次データ行
-  const simDataFull = analysisResult.simulationData || [];
+  // 月次データ行（smoothstep曲線でfinalSalesへ単調増加）
   const kpiInitialTraffic = 10000;
   const kpiInitialCVR = 0.012;
 
   for (let month = 1; month <= 12; month++) {
-    const dayIdx = month * 30;
-    const d = simDataFull.find(x => x.dayIndex === dayIdx) || simDataFull[Math.min(dayIdx-1, simDataFull.length-1)];
-    if (!d) continue;
-    const sales = d.supportScenario;
+    const sales = getSimSales(month);
     const progressRatio = (month - 1) / 11;
     const simInitSales = kpiInitialTraffic * kpiInitialCVR * 5000;
     const trafficGF = Math.pow(sales / Math.max(simInitSales, 1), 0.85);
@@ -1405,9 +1415,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     const cvr = kpiInitialCVR * (1 + progressRatio * 0.5);
     const orders = Math.max(1, Math.round(traffic * cvr));
     const aov = orders > 0 ? Math.round(sales / orders) : 5000;
-    const prevIdx = (month - 1) * 30;
-    const prevD = month > 1 ? (simDataFull.find(x => x.dayIndex === prevIdx) || simDataFull[Math.min(prevIdx-1, simDataFull.length-1)]) : null;
-    const prevSales = prevD ? prevD.supportScenario : currentSales;
+    const prevSales = month > 1 ? getSimSales(month - 1) : currentSales;
     const growth = prevSales > 0 ? ((sales / prevSales - 1) * 100).toFixed(1) : '—';
 
     const rowY = 1.5 + (month - 1) * 0.32;
@@ -1437,16 +1445,16 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       const textColor = isTarget ? C.tealDark : isGrowthCol ? (growthNum > 0 ? C.emerald : growthNum < 0 ? C.rose : C.slateLight) : C.dark;
       s12.addText(val, {
         x: cx + 0.02, y: rowY + 0.04, w: colWidths[ci] - 0.04, h: 0.22,
-        fontSize: ci === 0 ? 8.5 : 8, fontFace: ci === 0 ? fontJP : fontEN,
+        fontSize: 10, fontFace: ci === 0 ? fontJP : fontEN,
         color: textColor, bold: isTarget, align: ci === 0 ? 'center' : 'right', margin: 0
       });
     });
   }
 
   // 注釈
-  s12.addText('※ 売上＝シミュレーション算出値（真値）　アクセス・CVRはKPI設定から近似　客単価＝売上÷購入件数（逆算）', {
-    x: 0.3, y: 5.35, w: 9.4, h: 0.2,
-    fontSize: 7.5, fontFace: fontJP, color: C.slateLight, margin: 0
+  s12.addText('※ 売上＝スムーズ予測値　アクセス・CVRはKPI設定から近似　客単価＝売上÷購入件数（逆算）', {
+    x: 0.3, y: 5.35, w: 9.4, h: 0.24,
+    fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.slateLight, margin: 0
   });
   addFooter(s12, 10);
 
@@ -1497,11 +1505,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     });
     s13.addText(card.label, {
       x: cx + 0.15, y: 1.30, w: 4.3, h: 0.40,
-      fontSize: 13, fontFace: fontJP, color: C.white, bold: true, valign: 'middle', margin: 0
+      fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, valign: 'middle', margin: 0
     });
     s13.addText(formatCurrency(card.sales), {
       x: cx + 0.15, y: 1.78, w: 4.3, h: 0.52,
-      fontSize: 22, fontFace: fontJP, color: ci === 1 ? C.tealDark : C.dark, bold: true, margin: 0
+      fontSize: 22, fontFace: fontJP, lang: 'ja-JP', color: ci === 1 ? C.tealDark : C.dark, bold: true, margin: 0
     });
 
     const items = [
@@ -1522,11 +1530,11 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       });
       s13.addText(item.lbl, {
         x: cx + 0.25, y: iy + 0.06, w: 1.5, h: 0.22,
-        fontSize: 11.5, fontFace: fontJP, color: C.slateLight, bold: isBold, margin: 0
+        fontSize: 11.5, fontFace: fontJP, lang: 'ja-JP', color: C.slateLight, bold: isBold, margin: 0
       });
       s13.addText(item.val, {
         x: cx + 1.8, y: iy + 0.04, w: 2.55, h: 0.26,
-        fontSize: isBold ? 12 : 10, fontFace: fontJP, color: isBold ? item.color : C.dark,
+        fontSize: isBold ? 12 : 10, fontFace: fontJP, lang: 'ja-JP', color: isBold ? item.color : C.dark,
         bold: isBold, align: 'right', margin: 0
       });
     });
@@ -1540,9 +1548,106 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   });
   s13.addText(`12ヶ月累計での売上増加額（概算）：+${formatCurrency(Math.max(0, annualExtra))}　　広告費は売上対比 ${adPct}% 平均想定`, {
     x: 0.5, y: 5.05, w: 9, h: 0.24,
-    fontSize: 11.5, fontFace: fontJP, color: C.white, bold: true, margin: 0
+    fontSize: 11.5, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
   addFooter(s13, 11);
+
+  // ════════════════════════════════════════════════════════
+  // 補足資料スライド（supplementarySlides）
+  // ════════════════════════════════════════════════════════
+  const suppSlides = analysisResult.supplementarySlides || [];
+  suppSlides.forEach((sd, si) => {
+    const sn = pres.addSlide();
+    sn.background = { color: C.white };
+    const snNum = 12 + si;
+    addSlideHeader(sn, snNum, sd.slideTitle || '補足資料', '');
+    addSlideSummary(sn, sd.slideSubtitle || '補足資料リクエストに基づいて作成したスライドです。');
+
+    const sections = (sd.sections || []).slice(0, 2);
+    const metrics  = (sd.keyMetrics || []).slice(0, 4);
+    const hasMetrics = metrics.length > 0;
+    const leftW = hasMetrics ? 5.5 : 9.4;
+    const leftX = 0.3;
+    let curY = 1.30;
+
+    sections.forEach((sec, seci) => {
+      const sectionColors = [C.teal, C.tealDark, C.blue];
+      const secColor = sectionColors[seci % sectionColors.length];
+      // 見出しバー
+      sn.addShape(pres.shapes.RECTANGLE, {
+        x: leftX, y: curY, w: leftW, h: 0.34,
+        fill: { color: secColor }, line: { color: secColor }, rectRadius: 0.08
+      });
+      sn.addText(sec.heading || '', {
+        x: leftX + 0.12, y: curY + 0.02, w: leftW - 0.2, h: 0.30,
+        fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, valign: 'middle', margin: 0
+      });
+      curY += 0.36;
+      // ポイント
+      (sec.points || []).slice(0, 3).forEach((pt, pi) => {
+        sn.addShape(pres.shapes.RECTANGLE, {
+          x: leftX, y: curY, w: leftW, h: 0.5,
+          fill: { color: pi % 2 === 0 ? C.tealBg : C.white }, line: { color: 'E2E8F0', width: 0.5 }, rectRadius: 0.06
+        });
+        sn.addShape(pres.shapes.OVAL, {
+          x: leftX + 0.1, y: curY + 0.14, w: 0.22, h: 0.22,
+          fill: { color: secColor }, line: { color: secColor }
+        });
+        sn.addText(`${pi + 1}`, {
+          x: leftX + 0.1, y: curY + 0.14, w: 0.22, h: 0.22,
+          fontSize: 9, fontFace: fontEN, color: C.white, bold: true, align: 'center', valign: 'middle', margin: 0
+        });
+        sn.addText(pt, {
+          x: leftX + 0.4, y: curY + 0.03, w: leftW - 0.5, h: 0.44,
+          fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 1, valign: 'middle', align: 'left'
+        });
+        curY += 0.52;
+      });
+      curY += 0.12;
+    });
+
+    // 右カラム：KPI指標カード
+    if (hasMetrics) {
+      const rightX = 6.05, rightW = 3.65;
+      let mY = 1.30;
+      metrics.forEach((m, mi) => {
+        const mH = 0.95;
+        const bgColors = [C.tealBg, C.slateBg, C.blueBg, C.roseBg];
+        const accentColors = [C.teal, C.slate, C.blue, C.rose];
+        sn.addShape(pres.shapes.RECTANGLE, {
+          x: rightX, y: mY, w: rightW, h: mH,
+          fill: { color: bgColors[mi % bgColors.length] }, line: { color: accentColors[mi % accentColors.length], width: 1.5 }, rectRadius: 0.12
+        });
+        sn.addShape(pres.shapes.RECTANGLE, {
+          x: rightX, y: mY, w: 0.1, h: mH,
+          fill: { color: accentColors[mi % accentColors.length] }, line: { color: accentColors[mi % accentColors.length] }
+        });
+        sn.addText(m.label || '', {
+          x: rightX + 0.2, y: mY + 0.06, w: rightW - 0.25, h: 0.28,
+          fontSize: 11, fontFace: fontJP, lang: 'ja-JP', color: C.slateLight, bold: true, margin: 0
+        });
+        sn.addText(m.value || '', {
+          x: rightX + 0.2, y: mY + 0.38, w: rightW - 0.25, h: 0.48,
+          fontSize: 18, fontFace: fontJP, lang: 'ja-JP', color: accentColors[mi % accentColors.length], bold: true, margin: 0
+        });
+        mY += mH + 0.1;
+      });
+    }
+
+    // 下部ノートバー
+    if (sd.bottomNote) {
+      sn.addShape(pres.shapes.RECTANGLE, {
+        x: 0.3, y: 5.05, w: 9.4, h: 0.28,
+        fill: { color: C.tealDark }, line: { color: C.tealDark }, rectRadius: 0.06
+      });
+      sn.addText(`📌 ${sd.bottomNote}`, {
+        x: 0.5, y: 5.07, w: 9.0, h: 0.24,
+        fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
+      });
+    }
+
+    addFooter(sn, snNum);
+  });
 
   // ── ファイル出力 ──
   const fileName = `EC改善提案書_${companyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pptx`;
@@ -1743,7 +1848,8 @@ export default function App() {
     genre: '',
     productUrl: '',
     currentMonthlySales: 5000000,
-    hearingDetails: ''
+    hearingDetails: '',
+    supplementaryRequest: ''
   });
 
   // 【新機能】売上分解・利益計算ロジック
@@ -2091,6 +2197,12 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
    ・LTV/リピート強化目的の場合 → 同梱設計・LINE・定期購入施策を優先してください
    ・ヒアリング内容に挙がった課題は必ず currentIssues に含め、その解決策を proposedSolutions の上位に配置すること。
    ・thought_process には「ヒアリング内容をどのように施策に落とし込んだか」を必ず明記すること。
+   ・hearingCustomization の各フィールドには必ずヒアリング内容を踏まえた具体的な文章を出力すること。ヒアリングがない場合でも店舗名・ジャンル・現状データに基づいたデフォルト文を出力し、空文字は絶対に禁止。customProposalTitle もヒアリングがない場合は空文字を出力してよい。
+5. 【補足資料リクエスト】が入力されている場合、以下を必ず実行すること：
+   ・リクエスト内容をインターネット調査・専門知識・最新情報を駆使して徹底的に調べ、実務に使えるレベルの高品質なスライドを1〜3枚作成すること
+   ・各スライドは事実・数値・法規制・実績データなどを盛り込み、プロのコンサルタントが作成した資料として提出できるクオリティにすること
+   ・補助金・事業計画書リクエストの場合：対象補助金（IT導入補助金・小規模事業者持続化補助金・ものづくり補助金等）の要件・補助率・上限額を正確に調査して記載すること
+   ・補足資料リクエストがない場合は supplementarySlides を空配列 [] で出力すること
 5. 抽出する課題や施策、シミュレーションの要因は、誰が見ても納得できるよう【プロの視点で詳細かつ具体的に（各項目80〜150文字程度で深く）】言語化してください。短く表面的な指摘は評価を下げます。
 
 【楽天EC専門知識フレームワーク（2026年最新版・必ず施策立案に反映）】
@@ -2165,10 +2277,50 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
       "下がる要因2（※詳細に解説）"
     ],
     "genreTrendAnalysis": "対象ページの現状、ヒアリング内容、施策の効果、楽天の市場動向を総合し、なぜこのシミュレーション軌跡（1年後の着地）になるのか、プロのコンサルタントとしての詳細な分析見解（200〜300文字程度で深く論理的に解説してください）"
-  }
+  },
+  "hearingCustomization": {
+    "customProposalTitle": "ヒアリング内容から抽出した提案の特化テーマ（例：新規顧客獲得強化プラン / リピート率改善・LTV最大化プラン など。ヒアリングがない場合は空文字）",
+    "s2Summary": "店舗概要スライド用：ヒアリング背景・依頼目的を踏まえた50〜80文字のサマリー。ヒアリングがない場合は店舗データに基づいたデフォルト文を生成",
+    "s5Summary": "課題整理スライド用：ヒアリングで挙がった課題を中心とした50〜80文字のサマリー。ヒアリングがない場合はデフォルト文を生成",
+    "s6Summary": "アクセス施策スライド用：ヒアリング文脈に沿った50〜80文字のサマリー。ヒアリングがない場合はデフォルト文を生成",
+    "s7Summary": "CVR施策スライド用：ヒアリング文脈に沿った50〜80文字のサマリー。ヒアリングがない場合はデフォルト文を生成",
+    "s8Summary": "ロードマップスライド用：ヒアリング優先度を反映した50〜80文字のサマリー。ヒアリングがない場合はデフォルト文を生成",
+    "accessBarNote": "s6アクセス施策スライド下部バー用：ヒアリング文脈を踏まえた舟瀬式施策の重点コメント（40〜60文字）。ヒアリングがない場合はデフォルト文を生成",
+    "cvrBarNote": "s7CVR施策スライド下部バー用：ヒアリング文脈を踏まえた舟瀬式CVR施策の重点コメント（40〜60文字）。ヒアリングがない場合はデフォルト文を生成",
+    "roadmapP1Access": "Phase1（1〜3ヶ月）のアクセス施策2行（\\nで区切る）。ヒアリングの最優先課題・目的に対応した具体的施策タスクを出力すること",
+    "roadmapP1CVR": "Phase1（1〜3ヶ月）のCVR施策2行（\\nで区切る）。ヒアリングの最優先課題・目的に対応した具体的施策タスクを出力すること",
+    "roadmapP2Access": "Phase2（4〜6ヶ月）のアクセス施策2行（\\nで区切る）。Phase1の成果を踏まえた次のステップ",
+    "roadmapP2CVR": "Phase2（4〜6ヶ月）のCVR施策2行（\\nで区切る）。Phase1の成果を踏まえた次のステップ"
+  },
+  "supplementarySlides": [
+    {
+      "slideTitle": "補足資料リクエストに応じたスライドタイトル（例：事業計画書 ／ 補助金申請戦略）",
+      "slideSubtitle": "スライドのサブタイトル・対象補助金名や対象テーマ（例：IT導入補助金B類型 / 小規模事業者持続化補助金）",
+      "sections": [
+        {
+          "heading": "セクション見出し（例：事業概要・補助金要件・申請ポイント 等）",
+          "points": [
+            "具体的なポイント1（数値・根拠・法令名など実務レベルで詳細に60〜100文字）",
+            "具体的なポイント2",
+            "具体的なポイント3"
+          ]
+        },
+        {
+          "heading": "セクション2見出し",
+          "points": ["ポイント1", "ポイント2", "ポイント3"]
+        }
+      ],
+      "keyMetrics": [
+        { "label": "指標ラベル（例：補助上限額）", "value": "値（例：最大50万円）" },
+        { "label": "指標2", "value": "値2" },
+        { "label": "指標3", "value": "値3" }
+      ],
+      "bottomNote": "このスライドの締めとなるアクションステップまたは重要注意事項（40〜60文字）"
+    }
+  ]
 }`;
 
-      const userPrompt = `企業名: ${formData.companyName}\nジャンル: ${genreName}\n現在の月商: ${currentSales}円\n目標月商: ${targetSales}円\n対象URL: ${formData.productUrl}\n\n【事前ヒアリング・特記事項】\n${formData.hearingDetails || '特になし'}\n\n${preExtracted}\n\n【読み込んだページの内容(抜粋)】\n${pageContent}`;
+      const userPrompt = `企業名: ${formData.companyName}\nジャンル: ${genreName}\n現在の月商: ${currentSales}円\n目標月商: ${targetSales}円\n対象URL: ${formData.productUrl}\n\n【事前ヒアリング・特記事項】\n${formData.hearingDetails || '特になし'}\n\n【補足資料リクエスト】\n${formData.supplementaryRequest || 'なし（supplementarySlides は空配列で出力）'}\n\n${preExtracted}\n\n【読み込んだページの内容(抜粋)】\n${pageContent}`;
       
       const isGitHubToken = apiKey.startsWith('ghp_') || apiKey.startsWith('github_pat_');
       const apiUrl = isGitHubToken ? 'https://models.inference.ai.azure.com/chat/completions' : 'https://api.openai.com/v1/chat/completions';
@@ -2306,7 +2458,7 @@ const handleExportCSV = () => {
   }, 500);
 };
 
-  const formatCurrency = (value) => new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }).format(value);
+  const formatCurrency = (value) => '¥' + Math.round(Number(value) || 0).toLocaleString('en-US');
 
   const selectedGenreName = genres.find(g => g.id === formData.genre)?.name;
 
@@ -2956,11 +3108,32 @@ const handleExportCSV = () => {
                       value={formData.hearingDetails} 
                       onChange={handleInputChange} 
                       className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#4ECDC4] outline-none font-medium text-sm md:text-base transition-all resize-none h-32 leading-relaxed" 
-                      placeholder="例: リピート率は高いが新規獲得に苦戦している。&#13;&#10;客単価を上げるためのセット販売を強化したい。など" 
+                      placeholder="例: リピート率は高いが新規獲得に苦戦している。&#13;&#10;客単価を上げるためのセット販売を強化したい。など"
                     />
                   </div>
 
-                  <button 
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-slate-400" />補足資料の作成リクエスト
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-lg tracking-wider">任意</span>
+                    </label>
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-3 text-xs text-amber-800 leading-relaxed">
+                      <span className="font-bold">💡 使い方：</span> 基本提案書の後ろに追加したいスライドの内容を入力してください。<br />
+                      AIがネット調査・分析を行い、専用スライドを自動作成します。<br />
+                      <span className="text-amber-600">例：事業予算（補助金）を獲得するための事業計画書を作成して</span>
+                    </div>
+                    <textarea
+                      name="supplementaryRequest"
+                      value={formData.supplementaryRequest}
+                      onChange={handleInputChange}
+                      className="w-full px-5 py-4 bg-slate-50 border border-amber-200 rounded-2xl focus:ring-2 focus:ring-amber-300 outline-none font-medium text-sm md:text-base transition-all resize-none h-28 leading-relaxed"
+                      placeholder="例: 事業予算（補助金）を獲得するための事業計画書を作成して&#13;&#10;例: 競合他社比較分析のスライドを追加して&#13;&#10;例: 海外展開（越境EC）の計画書を追加して"
+                    />
+                  </div>
+
+                  <button
                     onClick={handleSimulate} disabled={isAnalyzing || !formData.productUrl}
                     className="w-full py-6 bg-gradient-to-r from-[#4ECDC4] to-[#26A69A] text-white font-black text-xl rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-xl mt-4 flex items-center justify-center gap-3"
                   >
@@ -3202,7 +3375,7 @@ const handleExportCSV = () => {
                         <h4 className="text-sm font-black text-slate-400 mb-4 flex items-center gap-2"><Database className="w-4 h-4" /> 弊社支援実績に基づく市場データ（{selectedGenreName}）</h4>
                         <div className="flex-grow flex flex-col gap-4">
                           <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                            <span className="inline-block px-2 py-1 bg-slate-200 text-slate-600 text-[10px] font-black rounded mb-2">ピュアフラット ジャンル別支援実績</span>
+                            <span className="inline-block px-2 py-1 bg-slate-200 text-slate-600 text-xs font-black rounded mb-2">ピュアフラット ジャンル別支援実績</span>
                             <p className="text-sm font-bold text-slate-700 leading-relaxed">
                               {getGenreInsight(selectedGenreName)}
                             </p>
@@ -3212,11 +3385,11 @@ const handleExportCSV = () => {
                           )}
                           <div className="grid grid-cols-2 gap-3 mt-auto">
                             <div className="bg-slate-50 p-3 rounded-lg">
-                              <p className="text-[10px] font-bold text-slate-400">平均月次成長率</p>
+                              <p className="text-xs font-bold text-slate-400">平均月次成長率</p>
                               <p className="text-lg font-black text-slate-700">{((genreStats[formData.genre]?.mean || 1.03) * 100 - 100).toFixed(1)}%</p>
                             </div>
                             <div className="bg-slate-50 p-3 rounded-lg">
-                              <p className="text-[10px] font-bold text-slate-400">ボラティリティ</p>
+                              <p className="text-xs font-bold text-slate-400">ボラティリティ</p>
                               <p className="text-lg font-black text-slate-700">{(genreStats[formData.genre]?.stdDev || 0.15).toFixed(2)}</p>
                             </div>
                           </div>
