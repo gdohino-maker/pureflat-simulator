@@ -465,28 +465,31 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   s1.background = { color: C.white };
   addSectionCover(s1);
 
-  // 会社名（左上）
+  // 会社名（左上）― 参照画像 x≈47px/120, y≈55px/160
   s1.addText(`${companyName} 御中`, {
-    x: 0.50, y: 0.30, w: 5.5, h: 0.32,
-    fontSize: 11, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 0
+    x: 0.40, y: 0.34, w: 4.0, h: 0.22,
+    fontSize: 11, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 0, valign: 'middle'
   });
+  // アンダーライン ― 参照画像 y≈89px/160, w≈236px/120
   s1.addShape(pres.shapes.RECTANGLE, {
-    x: 0.50, y: 0.63, w: 5.5, h: 0.02,
+    x: 0.40, y: 0.59, w: 2.20, h: 0.018,
     fill: { color: C.dark }, line: { color: C.dark, width: 0 }
   });
 
-  // メインタイトル（ティール大文字）
+  // メインタイトル ― 参照画像 x≈183px/120, y≈330px/160, w≈679px/120, h≈95px/160
   s1.addText('EC売上改善 提案書', {
-    x: 1.70, y: 2.10, w: 5.5, h: 0.85,
-    fontSize: 38, fontFace: fontJP, lang: 'ja-JP', color: C.teal, bold: true, margin: 0
+    x: 1.53, y: 2.06, w: 5.65, h: 0.70,
+    fontSize: 34, fontFace: fontJP, lang: 'ja-JP', color: C.teal, bold: true,
+    margin: 0, valign: 'middle'
   });
+  // タイトル下ライン ― 参照画像 y≈440px/160, w≈531px/120
   s1.addShape(pres.shapes.RECTANGLE, {
-    x: 1.70, y: 3.00, w: 5.5, h: 0.04,
+    x: 1.53, y: 2.80, w: 4.43, h: 0.04,
     fill: { color: C.teal }, line: { color: C.teal, width: 0 }
   });
   if (hc.customProposalTitle) {
     s1.addText(hc.customProposalTitle, {
-      x: 1.70, y: 3.10, w: 5.5, h: 0.28,
+      x: 1.53, y: 2.90, w: 5.65, h: 0.26,
       fontSize: 11, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, italic: true, margin: 0
     });
   }
