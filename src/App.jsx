@@ -1583,7 +1583,8 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
           x: leftX + 0.1, y: curY + 0.11, w: 0.22, h: 0.22,
           fontSize: 9, fontFace: fontEN, color: C.white, bold: true, align: 'center', valign: 'middle', margin: 0
         });
-        sn.addText(pt, {
+        const ptText = typeof pt === 'string' ? pt.replace(/\n/g, '　') : String(pt);
+        sn.addText(ptText, {
           x: leftX + 0.4, y: curY + 0.02, w: leftW - 0.5, h: 0.40,
           fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 1, valign: 'middle', align: 'left'
         });
@@ -2167,7 +2168,38 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
 
       setAnalysisStep('AIがノイズを除外し、数値を抽出中...');
       setAnalysisProgress(50);
-      
+
+      // ── 補足資料リクエストのWeb検索事前調査 ──
+      let researchContext = '';
+      if (formData.supplementaryRequest?.trim() && !apiKey.startsWith('ghp_') && !apiKey.startsWith('github_pat_')) {
+        setAnalysisStep('補足資料リクエストをネット調査中（Web検索）...');
+        setAnalysisProgress(62);
+        try {
+          const searchResp = await fetch('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              tools: [{ type: 'web_search_preview' }],
+              input: `以下のテーマについて徹底的にリサーチしてください。日本の事業者向けに具体的な情報を日本語で詳しくまとめてください。\n\n${formData.supplementaryRequest}\n\n特に以下の点を重視してください：\n- 具体的な数値データ・統計・市場規模\n- 補助金の場合：上限額・補助率・要件・申請期間・採択率\n- 法令・規制・業界基準\n- 最新トレンド・実績事例`
+            })
+          });
+          if (searchResp.ok) {
+            const searchData = await searchResp.json();
+            researchContext = (searchData.output || [])
+              .filter(o => o.type === 'message')
+              .flatMap(m => m.content || [])
+              .filter(c => c.type === 'output_text')
+              .map(c => c.text)
+              .join('\n');
+          }
+        } catch (searchErr) {
+          console.warn('Web research skipped:', searchErr);
+        }
+        setAnalysisStep('調査完了。AIが資料を生成中...');
+        setAnalysisProgress(72);
+      }
+
       const targetSales = getTargetSales(currentSales);
 
       const systemPrompt = `あなたは株式会社ピュアフラットの最高レベルのデータドリブンECコンサルタントAIです。楽天EC専門の現場ノウハウを持ち、年商1億円突破を複数社で実現してきたプロとして、データと仕組みで属人性を排除し、プラットフォーム変化に即座に適応する施策を立案します。
@@ -2185,9 +2217,10 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
    ・thought_process には「ヒアリング内容をどのように施策に落とし込んだか」を必ず明記すること。
    ・hearingCustomization の各フィールドには必ずヒアリング内容を踏まえた具体的な文章を出力すること。ヒアリングがない場合でも店舗名・ジャンル・現状データに基づいたデフォルト文を出力し、空文字は絶対に禁止。customProposalTitle もヒアリングがない場合は空文字を出力してよい。
 5. 【補足資料リクエスト】が入力されている場合、以下を必ず実行すること：
-   ・リクエスト内容をインターネット調査・専門知識・最新情報を駆使して徹底的に調べ、実務に使えるレベルの高品質なスライドを1〜3枚作成すること
-   ・各スライドは事実・数値・法規制・実績データなどを盛り込み、プロのコンサルタントが作成した資料として提出できるクオリティにすること
-   ・補助金・事業計画書リクエストの場合：対象補助金（IT導入補助金・小規模事業者持続化補助金・ものづくり補助金等）の要件・補助率・上限額を正確に調査して記載すること
+   ・提供されたネット調査結果（【補足資料リクエストのネット調査結果】セクション）を最大限活用し、実務で使えるクオリティのスライドを1〜3枚作成すること
+   ・各スライドのsections.points は必ず「改行なし・最大35文字」の簡潔な箇条書きにすること。長文・複数センテンス・改行は絶対禁止
+   ・keyMetrics には調査で得た具体的な数値（補助上限額・採択率・市場規模 等）を必ず入れること
+   ・補助金・事業計画書リクエストの場合：IT導入補助金・小規模事業者持続化補助金・ものづくり補助金等の要件・補助率・上限額を調査結果から正確に記載
    ・補足資料リクエストがない場合は supplementarySlides を空配列 [] で出力すること
 5. 抽出する課題や施策、シミュレーションの要因は、誰が見ても納得できるよう【プロの視点で詳細かつ具体的に（各項目80〜150文字程度で深く）】言語化してください。短く表面的な指摘は評価を下げます。
 
@@ -2280,33 +2313,41 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
   },
   "supplementarySlides": [
     {
-      "slideTitle": "補足資料リクエストに応じたスライドタイトル（例：事業計画書 ／ 補助金申請戦略）",
-      "slideSubtitle": "スライドのサブタイトル・対象補助金名や対象テーマ（例：IT導入補助金B類型 / 小規模事業者持続化補助金）",
+      "slideTitle": "スライドタイトル（20文字以内）",
+      "slideSubtitle": "サブタイトル（40文字以内）",
       "sections": [
         {
-          "heading": "セクション見出し（例：事業概要・補助金要件・申請ポイント 等）",
+          "heading": "セクション見出し（15文字以内）",
           "points": [
-            "具体的なポイント1（数値・根拠・法令名など実務レベルで詳細に60〜100文字）",
-            "具体的なポイント2",
-            "具体的なポイント3"
+            "ポイント1（改行なし・最大35文字）",
+            "ポイント2（改行なし・最大35文字）",
+            "ポイント3（改行なし・最大35文字）"
           ]
         },
         {
-          "heading": "セクション2見出し",
-          "points": ["ポイント1", "ポイント2", "ポイント3"]
+          "heading": "セクション2見出し（15文字以内）",
+          "points": [
+            "ポイント1（改行なし・最大35文字）",
+            "ポイント2（改行なし・最大35文字）",
+            "ポイント3（改行なし・最大35文字）"
+          ]
         }
       ],
       "keyMetrics": [
-        { "label": "指標ラベル（例：補助上限額）", "value": "値（例：最大50万円）" },
+        { "label": "指標名（10文字以内）", "value": "値（例：最大50万円）" },
         { "label": "指標2", "value": "値2" },
-        { "label": "指標3", "value": "値3" }
+        { "label": "指標3", "value": "値3" },
+        { "label": "指標4", "value": "値4" }
       ],
-      "bottomNote": "このスライドの締めとなるアクションステップまたは重要注意事項（40〜60文字）"
+      "bottomNote": "アクションステップまたは重要注意事項（40文字以内）"
     }
   ]
 }`;
 
-      const userPrompt = `企業名: ${formData.companyName}\nジャンル: ${genreName}\n現在の月商: ${currentSales}円\n目標月商: ${targetSales}円\n対象URL: ${formData.productUrl}\n\n【事前ヒアリング・特記事項】\n${formData.hearingDetails || '特になし'}\n\n【補足資料リクエスト】\n${formData.supplementaryRequest || 'なし（supplementarySlides は空配列で出力）'}\n\n${preExtracted}\n\n【読み込んだページの内容(抜粋)】\n${pageContent}`;
+      const researchSection = researchContext
+        ? `\n\n【補足資料リクエストのネット調査結果（必ずこの情報を元にスライドを作成すること）】\n${researchContext.substring(0, 3500)}`
+        : '';
+      const userPrompt = `企業名: ${formData.companyName}\nジャンル: ${genreName}\n現在の月商: ${currentSales}円\n目標月商: ${targetSales}円\n対象URL: ${formData.productUrl}\n\n【事前ヒアリング・特記事項】\n${formData.hearingDetails || '特になし'}\n\n【補足資料リクエスト】\n${formData.supplementaryRequest || 'なし（supplementarySlides は空配列で出力）'}${researchSection}\n\n${preExtracted}\n\n【読み込んだページの内容(抜粋)】\n${pageContent}`;
       
       const isGitHubToken = apiKey.startsWith('ghp_') || apiKey.startsWith('github_pat_');
       const apiUrl = isGitHubToken ? 'https://models.inference.ai.azure.com/chat/completions' : 'https://api.openai.com/v1/chat/completions';
