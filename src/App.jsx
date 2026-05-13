@@ -394,7 +394,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
     slide.addText(title, {
       x: 0.45, y: 0.04, w: 8.8, h: 0.60,
       fontSize: titleFontSize, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, valign: 'middle', margin: 0,
-      outline: { color: '003344', size: 1.5 }
+      outline: { color: '1a4a5a', size: 0.4 }
     });
     if (num) addFooter(slide, num);
   };
@@ -459,74 +459,136 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   };
 
   // ════════════════════════════════════════════════════════
-  // SLIDE 1: 表紙（PureFlat PDFデザイン準拠 - 白背景＋右側ティール円）
+  // SLIDE 1: 表紙（新デザイン - 白背景＋ティールアーク＋Pure Flatロゴ）
   // ════════════════════════════════════════════════════════
   const s1 = pres.addSlide();
   s1.background = { color: C.white };
 
-  // 資料ベース.pptx と完全同一のセクション扉背景（ドーナツ円＋ハッチ入り白円＋装飾リング＋ドットグリッド＋Pure Flatロゴ）
-  addSectionCover(s1);
+  // === 右上ティールアーク（二重クレセント） ===
+  s1.addShape(pres.shapes.OVAL, {
+    x: 7.6, y: -2.0, w: 5.2, h: 5.2,
+    fill: { color: C.teal }, line: { color: C.teal, width: 0 }
+  });
+  s1.addShape(pres.shapes.OVAL, {
+    x: 8.5, y: -1.0, w: 4.0, h: 4.0,
+    fill: { color: C.white }, line: { color: C.white, width: 0 }
+  });
+  s1.addShape(pres.shapes.OVAL, {
+    x: 9.1, y: -0.3, w: 3.0, h: 3.0,
+    fill: { color: C.teal }, line: { color: C.teal, width: 0 }
+  });
+  s1.addShape(pres.shapes.OVAL, {
+    x: 9.8, y: 0.4, w: 2.2, h: 2.2,
+    fill: { color: C.white }, line: { color: C.white, width: 0 }
+  });
 
-  // テキストコンテンツ（左側）
-  s1.addText('楽天市場', {
-    x: 0.7, y: 1.1, w: 4.0, h: 0.38,
-    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: true, margin: 0
+  // === 左下ティールアーク（二重クレセント） ===
+  s1.addShape(pres.shapes.OVAL, {
+    x: -2.8, y: 3.4, w: 5.2, h: 5.2,
+    fill: { color: C.teal }, line: { color: C.teal, width: 0 }
   });
+  s1.addShape(pres.shapes.OVAL, {
+    x: -1.9, y: 4.3, w: 4.0, h: 4.0,
+    fill: { color: C.white }, line: { color: C.white, width: 0 }
+  });
+  s1.addShape(pres.shapes.OVAL, {
+    x: -1.3, y: 4.9, w: 3.0, h: 3.0,
+    fill: { color: C.teal }, line: { color: C.teal, width: 0 }
+  });
+  s1.addShape(pres.shapes.OVAL, {
+    x: -0.6, y: 5.6, w: 2.2, h: 2.2,
+    fill: { color: C.white }, line: { color: C.white, width: 0 }
+  });
+
+  // === ドットグリッド（右中央） ===
+  {
+    const dotColor = 'CBD5E1';
+    const dotX0 = 6.1, dotY0 = 1.7;
+    const dotCols = 7, dotRows = 5, dotSpacing = 0.38;
+    for (let r = 0; r < dotRows; r++) {
+      for (let c = 0; c < dotCols; c++) {
+        s1.addShape(pres.shapes.OVAL, {
+          x: dotX0 + c * dotSpacing, y: dotY0 + r * dotSpacing,
+          w: 0.07, h: 0.07,
+          fill: { color: dotColor }, line: { color: dotColor, width: 0 }
+        });
+      }
+    }
+  }
+
+  // === 会社名（左上・受取人） ===
+  s1.addText(`${companyName} 御中`, {
+    x: 0.7, y: 0.32, w: 5.8, h: 0.34,
+    fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: false, margin: 0
+  });
+  s1.addShape(pres.shapes.RECTANGLE, {
+    x: 0.7, y: 0.67, w: 5.8, h: 0.025,
+    fill: { color: C.dark }, line: { color: C.dark, width: 0 }
+  });
+
+  // === Pure Flat ロゴ（左中央） ===
+  s1.addShape(pres.shapes.RECTANGLE, {
+    x: 0.70, y: 3.10, w: 0.68, h: 0.52,
+    fill: { color: C.teal }, line: { color: C.teal, width: 0 }, rectRadius: 0.10
+  });
+  s1.addShape(pres.shapes.RECTANGLE, {
+    x: 1.00, y: 3.38, w: 0.68, h: 0.52,
+    fill: { color: '22C55E' }, line: { color: '22C55E', width: 0 }, rectRadius: 0.10
+  });
+  s1.addText('Pure Flat', {
+    x: 1.82, y: 3.16, w: 2.8, h: 0.46,
+    fontSize: 17, fontFace: fontEN, color: C.dark, bold: true, margin: 0, valign: 'middle'
+  });
+
+  // === メインタイトル ===
   s1.addText('EC売上改善 提案書', {
-    x: 0.7, y: 1.5, w: 4.5, h: 0.95,
-    fontSize: 34, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 0
+    x: 0.7, y: 1.5, w: 5.6, h: 1.05,
+    fontSize: 36, fontFace: fontJP, lang: 'ja-JP', color: C.teal, bold: true, margin: 0
   });
-  s1.addText(companyName, {
-    x: 0.7, y: 2.55, w: 4.5, h: 0.6,
-    fontSize: 24, fontFace: fontJP, lang: 'ja-JP', color: C.teal, bold: true, margin: 0
+  s1.addShape(pres.shapes.RECTANGLE, {
+    x: 0.7, y: 2.60, w: 5.6, h: 0.05,
+    fill: { color: C.teal }, line: { color: C.teal, width: 0 }
   });
   if (hc.customProposalTitle) {
     s1.addText(hc.customProposalTitle, {
-      x: 0.7, y: 3.16, w: 4.5, h: 0.22,
+      x: 0.7, y: 2.70, w: 5.6, h: 0.24,
       fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, italic: true, margin: 0
     });
   }
-  const _titleOffset = hc.customProposalTitle ? 0.2 : 0;
+
+  // === 日付・ジャンル情報 ===
+  s1.addText(`ジャンル: ${genreName}　　現在月商: ${formatCurrency(currentSales)}　　作成日: ${new Date().toLocaleDateString('ja-JP')}`, {
+    x: 0.7, y: 4.22, w: 5.8, h: 0.26,
+    fontSize: 9, fontFace: fontJP, lang: 'ja-JP', color: C.slate, margin: 0
+  });
+
+  // === 1年後目標ボックス ===
   s1.addShape(pres.shapes.RECTANGLE, {
-    x: 0.7, y: 3.28 + _titleOffset, w: 3.5, h: 0.04,
-    fill: { color: C.tealLight }, line: { color: C.tealLight, width: 0 }
-  });
-  s1.addText(`ジャンル: ${genreName}`, {
-    x: 0.7, y: 3.42 + _titleOffset, w: 4.5, h: 0.28,
-    fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.slate, margin: 0
-  });
-  s1.addText(`現在月商: ${formatCurrency(currentSales)}　　作成日: ${new Date().toLocaleDateString('ja-JP')}`, {
-    x: 0.7, y: 3.7 + _titleOffset, w: 4.5, h: 0.28,
-    fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.slate, margin: 0
-  });
-  // 1年後目標ボックス
-  s1.addShape(pres.shapes.RECTANGLE, {
-    x: 0.7, y: 4.1, w: 2.8, h: 1.0,
+    x: 0.7, y: 4.55, w: 2.8, h: 0.85,
     fill: { color: C.teal }, line: { color: C.teal, width: 0 }, rectRadius: 0.12
   });
   s1.addText('1年後目標月商', {
-    x: 0.85, y: 4.18, w: 2.5, h: 0.26,
-    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealLight, bold: true, margin: 0
+    x: 0.85, y: 4.62, w: 2.5, h: 0.24,
+    fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.tealLight, bold: true, margin: 0
   });
   s1.addText(formatCurrency(finalSales), {
-    x: 0.85, y: 4.43, w: 2.5, h: 0.52,
+    x: 0.85, y: 4.84, w: 2.5, h: 0.44,
     fontSize: 20, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
   });
-  // 現状比ボックス
+
+  // === 現状比ボックス ===
   s1.addShape(pres.shapes.RECTANGLE, {
-    x: 3.65, y: 4.1, w: 1.85, h: 1.0,
+    x: 3.65, y: 4.55, w: 1.85, h: 0.85,
     fill: { color: C.tealBg }, line: { color: C.tealLight, width: 1.5 }, rectRadius: 0.12
   });
   s1.addText('現状比', {
-    x: 3.75, y: 4.18, w: 1.65, h: 0.26,
-    fontSize: 13, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: true, margin: 0
+    x: 3.75, y: 4.62, w: 1.65, h: 0.24,
+    fontSize: 12, fontFace: fontJP, lang: 'ja-JP', color: C.tealDark, bold: true, margin: 0
   });
   s1.addText(`+${growthRate}%`, {
-    x: 3.75, y: 4.43, w: 1.65, h: 0.52,
+    x: 3.75, y: 4.84, w: 1.65, h: 0.44,
     fontSize: 20, fontFace: fontEN, color: C.tealDark, bold: true, margin: 0
   });
-  // ロゴ（左下）
-  addLogo(s1);
 
   // ════════════════════════════════════════════════════════
   // SLIDE 2: 商品・現状サマリー
@@ -1556,6 +1618,26 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
   // 補足資料スライド（supplementarySlides）
   // ════════════════════════════════════════════════════════
   const suppSlides = analysisResult.supplementarySlides || [];
+
+  // 補足資料 セクション扉スライド
+  if (suppSlides.length > 0) {
+    const sDivider = pres.addSlide();
+    sDivider.background = { color: C.white };
+    addSectionCover(sDivider);
+    sDivider.addText('補足資料', {
+      x: 0.7, y: 1.9, w: 7.0, h: 1.1,
+      fontSize: 44, fontFace: fontJP, lang: 'ja-JP', color: C.dark, bold: true, margin: 0
+    });
+    sDivider.addText(formData.supplementaryRequest || '追加資料', {
+      x: 0.7, y: 3.1, w: 7.0, h: 0.45,
+      fontSize: 18, fontFace: fontJP, lang: 'ja-JP', color: C.teal, margin: 0
+    });
+    sDivider.addShape(pres.shapes.RECTANGLE, {
+      x: 0.7, y: 3.62, w: 4.5, h: 0.04,
+      fill: { color: C.teal }, line: { color: C.teal, width: 0 }
+    });
+  }
+
   suppSlides.forEach((sd, si) => {
     const sn = pres.addSlide();
     sn.background = { color: C.white };
@@ -1586,24 +1668,24 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       // ポイント
       (sec.points || []).slice(0, 3).forEach((pt, pi) => {
         sn.addShape(pres.shapes.RECTANGLE, {
-          x: leftX, y: curY, w: leftW, h: 0.5,
+          x: leftX, y: curY, w: leftW, h: 0.44,
           fill: { color: pi % 2 === 0 ? C.tealBg : C.white }, line: { color: 'E2E8F0', width: 0.5 }, rectRadius: 0.06
         });
         sn.addShape(pres.shapes.OVAL, {
-          x: leftX + 0.1, y: curY + 0.14, w: 0.22, h: 0.22,
+          x: leftX + 0.1, y: curY + 0.11, w: 0.22, h: 0.22,
           fill: { color: secColor }, line: { color: secColor }
         });
         sn.addText(`${pi + 1}`, {
-          x: leftX + 0.1, y: curY + 0.14, w: 0.22, h: 0.22,
+          x: leftX + 0.1, y: curY + 0.11, w: 0.22, h: 0.22,
           fontSize: 9, fontFace: fontEN, color: C.white, bold: true, align: 'center', valign: 'middle', margin: 0
         });
         sn.addText(pt, {
-          x: leftX + 0.4, y: curY + 0.03, w: leftW - 0.5, h: 0.44,
+          x: leftX + 0.4, y: curY + 0.02, w: leftW - 0.5, h: 0.40,
           fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.dark, margin: 1, valign: 'middle', align: 'left'
         });
-        curY += 0.52;
+        curY += 0.46;
       });
-      curY += 0.12;
+      curY += 0.08;
     });
 
     // 右カラム：KPI指標カード
@@ -1611,7 +1693,7 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
       const rightX = 6.05, rightW = 3.65;
       let mY = 1.30;
       metrics.forEach((m, mi) => {
-        const mH = 0.95;
+        const mH = 0.82;
         const bgColors = [C.tealBg, C.slateBg, C.blueBg, C.roseBg];
         const accentColors = [C.teal, C.slate, C.blue, C.rose];
         sn.addShape(pres.shapes.RECTANGLE, {
@@ -1627,21 +1709,21 @@ const generatePptx = async (analysisResult, formData, genreStats, formatCurrency
           fontSize: 11, fontFace: fontJP, lang: 'ja-JP', color: C.slateLight, bold: true, margin: 0
         });
         sn.addText(m.value || '', {
-          x: rightX + 0.2, y: mY + 0.38, w: rightW - 0.25, h: 0.48,
+          x: rightX + 0.2, y: mY + 0.34, w: rightW - 0.25, h: 0.40,
           fontSize: 18, fontFace: fontJP, lang: 'ja-JP', color: accentColors[mi % accentColors.length], bold: true, margin: 0
         });
-        mY += mH + 0.1;
+        mY += mH + 0.08;
       });
     }
 
     // 下部ノートバー
     if (sd.bottomNote) {
       sn.addShape(pres.shapes.RECTANGLE, {
-        x: 0.3, y: 5.05, w: 9.4, h: 0.28,
+        x: 0.3, y: 5.0, w: 9.4, h: 0.28,
         fill: { color: C.tealDark }, line: { color: C.tealDark }, rectRadius: 0.06
       });
-      sn.addText(`📌 ${sd.bottomNote}`, {
-        x: 0.5, y: 5.07, w: 9.0, h: 0.24,
+      sn.addText(`${sd.bottomNote}`, {
+        x: 0.5, y: 5.02, w: 9.0, h: 0.24,
         fontSize: 10, fontFace: fontJP, lang: 'ja-JP', color: C.white, bold: true, margin: 0
       });
     }
