@@ -2169,29 +2169,56 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
       setAnalysisStep('AIがノイズを除外し、数値を抽出中...');
       setAnalysisProgress(50);
 
+      // ── APIキー種別判定 ──
+      const isGeminiKey   = apiKey.startsWith('AIza');
+      const isGitHubToken = apiKey.startsWith('ghp_') || apiKey.startsWith('github_pat_');
+
       // ── 補足資料リクエストのWeb検索事前調査 ──
       let researchContext = '';
-      if (formData.supplementaryRequest?.trim() && !apiKey.startsWith('ghp_') && !apiKey.startsWith('github_pat_')) {
-        setAnalysisStep('補足資料リクエストをネット調査中（Web検索）...');
+      if (formData.supplementaryRequest?.trim() && !isGitHubToken) {
+        setAnalysisStep('補足資料リクエストをネット調査中（Google検索）...');
         setAnalysisProgress(62);
         try {
-          const searchResp = await fetch('https://api.openai.com/v1/responses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-            body: JSON.stringify({
-              model: 'gpt-4o',
-              tools: [{ type: 'web_search_preview' }],
-              input: `以下のテーマについて徹底的にリサーチしてください。日本の事業者向けに具体的な情報を日本語で詳しくまとめてください。\n\n${formData.supplementaryRequest}\n\n特に以下の点を重視してください：\n- 具体的な数値データ・統計・市場規模\n- 補助金の場合：上限額・補助率・要件・申請期間・採択率\n- 法令・規制・業界基準\n- 最新トレンド・実績事例`
-            })
-          });
-          if (searchResp.ok) {
-            const searchData = await searchResp.json();
-            researchContext = (searchData.output || [])
-              .filter(o => o.type === 'message')
-              .flatMap(m => m.content || [])
-              .filter(c => c.type === 'output_text')
-              .map(c => c.text)
-              .join('\n');
+          if (isGeminiKey) {
+            // Gemini + Google Search grounding
+            const searchResp = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tools: [{ google_search: {} }],
+                  contents: [{
+                    role: 'user',
+                    parts: [{ text: `以下のテーマについて徹底的にリサーチしてください。日本の事業者向けに具体的な情報を日本語で詳しくまとめてください。\n\n${formData.supplementaryRequest}\n\n特に重視してください：\n- 具体的な数値データ・統計・市場規模\n- 補助金の場合：上限額・補助率・要件・申請期間・採択率\n- 法令・規制・業界基準\n- 最新トレンド・実績事例` }]
+                  }]
+                })
+              }
+            );
+            if (searchResp.ok) {
+              const sd = await searchResp.json();
+              researchContext = (sd.candidates?.[0]?.content?.parts || [])
+                .map(p => p.text || '').join('\n');
+            }
+          } else {
+            // OpenAI Responses API
+            const searchResp = await fetch('https://api.openai.com/v1/responses', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: 'gpt-4o',
+                tools: [{ type: 'web_search_preview' }],
+                input: `以下のテーマについて徹底的にリサーチしてください。日本の事業者向けに具体的な情報を日本語で詳しくまとめてください。\n\n${formData.supplementaryRequest}\n\n特に：数値データ・補助金要件・法令・最新トレンド`
+              })
+            });
+            if (searchResp.ok) {
+              const sd = await searchResp.json();
+              researchContext = (sd.output || [])
+                .filter(o => o.type === 'message')
+                .flatMap(m => m.content || [])
+                .filter(c => c.type === 'output_text')
+                .map(c => c.text).join('\n');
+            }
           }
         } catch (searchErr) {
           console.warn('Web research skipped:', searchErr);
@@ -2349,50 +2376,73 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
         : '';
       const userPrompt = `企業名: ${formData.companyName}\nジャンル: ${genreName}\n現在の月商: ${currentSales}円\n目標月商: ${targetSales}円\n対象URL: ${formData.productUrl}\n\n【事前ヒアリング・特記事項】\n${formData.hearingDetails || '特になし'}\n\n【補足資料リクエスト】\n${formData.supplementaryRequest || 'なし（supplementarySlides は空配列で出力）'}${researchSection}\n\n${preExtracted}\n\n【読み込んだページの内容(抜粋)】\n${pageContent}`;
       
-      const isGitHubToken = apiKey.startsWith('ghp_') || apiKey.startsWith('github_pat_');
-      const apiUrl = isGitHubToken ? 'https://models.inference.ai.azure.com/chat/completions' : 'https://api.openai.com/v1/chat/completions';
-      
       setAnalysisStep('事実データに基づく定量的課題・要因を生成中...');
       setAnalysisProgress(75);
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o', 
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
-          response_format: { type: "json_object" },
-          temperature: 0.1 
-        })
-      });
+      if (isGeminiKey) {
+        // ── Gemini 2.0 Flash による JSON 生成 ──
+        const geminiResp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+              generationConfig: { responseMimeType: 'application/json', temperature: 0.1 }
+            })
+          }
+        );
+        const geminiData = await geminiResp.json();
+        if (!geminiResp.ok) {
+          if (geminiResp.status === 400) throw new Error("Gemini APIキーが無効です。Google AI Studioで確認してください。");
+          if (geminiResp.status === 429) throw new Error("Gemini APIの利用上限に達しています。しばらく待ってから再試行してください。");
+          throw new Error(`Gemini APIエラー: ${geminiData.error?.message || geminiResp.statusText}`);
+        }
+        const jsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (!jsonText) throw new Error("GeminiからJSON回答が得られませんでした。");
+        aiResult = JSON.parse(jsonText);
+      } else {
+        // ── OpenAI / GitHub Models による JSON 生成 ──
+        const apiUrl = isGitHubToken
+          ? 'https://models.inference.ai.azure.com/chat/completions'
+          : 'https://api.openai.com/v1/chat/completions';
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.error?.message?.includes('does not exist') || data.error?.code === 'model_not_found') {
-            const fallbackResponse = await fetch(apiUrl, {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+            response_format: { type: "json_object" },
+            temperature: 0.1
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          if (data.error?.message?.includes('does not exist') || data.error?.code === 'model_not_found') {
+            const fb = await fetch(apiUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
                 model: 'gpt-4o-mini',
                 messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
                 response_format: { type: "json_object" },
-                temperature: 0.1 
+                temperature: 0.1
               })
             });
-            const fallbackData = await fallbackResponse.json();
-            if (!fallbackResponse.ok) throw new Error(`AI通信エラー: ${fallbackData.error?.message || fallbackResponse.statusText}`);
-            aiResult = JSON.parse(fallbackData.choices[0].message.content);
-        } else {
+            const fbData = await fb.json();
+            if (!fb.ok) throw new Error(`AI通信エラー: ${fbData.error?.message || fb.statusText}`);
+            aiResult = JSON.parse(fbData.choices[0].message.content);
+          } else {
             if (response.status === 401) throw new Error("APIキーが間違っています。「データ設定」から正しいキーを入力してください。");
             if (response.status === 429) throw new Error("APIの利用上限に達しています。残高を確認してください。");
             throw new Error(`AI通信エラー: ${data.error?.message || response.statusText}`);
+          }
+        } else {
+          if (!data.choices?.length) throw new Error("AIから正しい形式の回答が返ってきませんでした。");
+          aiResult = JSON.parse(data.choices[0].message.content);
         }
-      } else {
-        if (!data.choices || data.choices.length === 0) {
-          throw new Error("AIから正しい形式の回答が返ってきませんでした。");
-        }
-        aiResult = JSON.parse(data.choices[0].message.content);
       }
 
       setAnalysisStep('シミュレーション結果のコンパイル中...');
@@ -2864,8 +2914,11 @@ const handleExportCSV = () => {
                 <div className="bg-white p-8 md:p-10 rounded-3xl border border-slate-200 shadow-xl">
                   <h2 className="text-xl font-black mb-6 flex items-center gap-3 text-[#26A69A]"><Settings className="w-6 h-6" /> API設定</h2>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-3">APIキー (OpenAI または GitHub)</label>
-                    <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-..." className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#4ECDC4] outline-none text-lg font-medium transition-all" />
+                    <label className="block text-sm font-bold text-slate-700 mb-2">APIキー</label>
+                    <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="AIza... (Gemini) / sk-... (OpenAI) / ghp_... (GitHub)" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#4ECDC4] outline-none text-lg font-medium transition-all" />
+                    <p className="mt-2 text-xs text-slate-500">
+                      <span className="font-bold text-teal-600">Gemini（推奨）</span>: Google検索+高精度解析 ／ OpenAI: GPT-4o ／ GitHub: 無料枠
+                    </p>
                   </div>
                 </div>
 
