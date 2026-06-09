@@ -2410,8 +2410,14 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
             if (geminiResp.status === 429) throw new Error("Gemini APIの利用上限に達しています。しばらく待ってから再試行してください。");
             throw new Error(`Gemini APIエラー: ${msg || geminiResp.statusText}`);
           }
-          const jsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if (!jsonText) { continue; }
+          const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (!rawText) { continue; }
+          // Markdownコードブロック除去 + 最初の { から最後の } を抽出
+          const stripped = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+          const jsonStart = stripped.indexOf('{');
+          const jsonEnd = stripped.lastIndexOf('}');
+          if (jsonStart === -1 || jsonEnd === -1) { continue; }
+          const jsonText = stripped.substring(jsonStart, jsonEnd + 1);
           aiResult = JSON.parse(jsonText);
           geminiSuccess = true;
           break;
