@@ -2180,25 +2180,28 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
         setAnalysisProgress(62);
         try {
           if (isGeminiKey) {
-            // Gemini + Google Search grounding
-            const searchResp = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  tools: [{ google_search: {} }],
-                  contents: [{
-                    role: 'user',
-                    parts: [{ text: `以下のテーマについて徹底的にリサーチしてください。日本の事業者向けに具体的な情報を日本語で詳しくまとめてください。\n\n${formData.supplementaryRequest}\n\n特に重視してください：\n- 具体的な数値データ・統計・市場規模\n- 補助金の場合：上限額・補助率・要件・申請期間・採択率\n- 法令・規制・業界基準\n- 最新トレンド・実績事例` }]
-                  }]
-                })
+            // Gemini + Google Search grounding（フォールバックチェーン）
+            const searchModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite-preview-06-17', 'gemini-1.5-flash-latest'];
+            const searchBody = JSON.stringify({
+              tools: [{ google_search: {} }],
+              contents: [{
+                role: 'user',
+                parts: [{ text: `以下のテーマについて徹底的にリサーチしてください。日本の事業者向けに具体的な情報を日本語で詳しくまとめてください。\n\n${formData.supplementaryRequest}\n\n特に重視してください：\n- 具体的な数値データ・統計・市場規模\n- 補助金の場合：上限額・補助率・要件・申請期間・採択率\n- 法令・規制・業界基準\n- 最新トレンド・実績事例` }]
+              }]
+            });
+            for (const sModel of searchModels) {
+              const searchResp = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${sModel}:generateContent?key=${apiKey}`,
+                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: searchBody }
+              );
+              if (searchResp.ok) {
+                const sd = await searchResp.json();
+                researchContext = (sd.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('\n');
+                break;
               }
-            );
-            if (searchResp.ok) {
-              const sd = await searchResp.json();
-              researchContext = (sd.candidates?.[0]?.content?.parts || [])
-                .map(p => p.text || '').join('\n');
+              const errData = await searchResp.json().catch(() => ({}));
+              const errMsg = errData.error?.message || '';
+              if (!errMsg.includes('no longer available') && !errMsg.includes('high demand') && searchResp.status !== 503) break;
             }
           } else {
             // OpenAI Responses API
@@ -2380,28 +2383,40 @@ const calculateProfitMargin = (sales, costs, scenario = 'mid') => {
       setAnalysisProgress(75);
 
       if (isGeminiKey) {
-        // ── Gemini 2.0 Flash による JSON 生成 ──
-        const geminiResp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              systemInstruction: { parts: [{ text: systemPrompt }] },
-              contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-              generationConfig: { responseMimeType: 'application/json', temperature: 0.1 }
-            })
+        // ── Gemini JSON 生成（フォールバックチェーン） ──
+        const geminiModels = [
+          'gemini-2.5-flash',
+          'gemini-2.5-flash-lite-preview-06-17',
+          'gemini-1.5-flash-latest',
+        ];
+        const geminiBody = JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.1 }
+        });
+        let geminiSuccess = false;
+        for (const model of geminiModels) {
+          setAnalysisStep(`Gemini (${model}) で分析中...`);
+          const geminiResp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: geminiBody }
+          );
+          const geminiData = await geminiResp.json();
+          if (!geminiResp.ok) {
+            const msg = geminiData.error?.message || '';
+            if (geminiResp.status === 400 && msg.includes('no longer available')) { continue; }
+            if (geminiResp.status === 503 || msg.includes('high demand') || msg.includes('overloaded')) { continue; }
+            if (geminiResp.status === 400) throw new Error("Gemini APIキーが無効です。Google AI Studioで確認してください。");
+            if (geminiResp.status === 429) throw new Error("Gemini APIの利用上限に達しています。しばらく待ってから再試行してください。");
+            throw new Error(`Gemini APIエラー: ${msg || geminiResp.statusText}`);
           }
-        );
-        const geminiData = await geminiResp.json();
-        if (!geminiResp.ok) {
-          if (geminiResp.status === 400) throw new Error("Gemini APIキーが無効です。Google AI Studioで確認してください。");
-          if (geminiResp.status === 429) throw new Error("Gemini APIの利用上限に達しています。しばらく待ってから再試行してください。");
-          throw new Error(`Gemini APIエラー: ${geminiData.error?.message || geminiResp.statusText}`);
+          const jsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (!jsonText) { continue; }
+          aiResult = JSON.parse(jsonText);
+          geminiSuccess = true;
+          break;
         }
-        const jsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (!jsonText) throw new Error("GeminiからJSON回答が得られませんでした。");
-        aiResult = JSON.parse(jsonText);
+        if (!geminiSuccess) throw new Error("Geminiが混雑中です。しばらく待ってから再試行してください。");
       } else {
         // ── OpenAI / GitHub Models による JSON 生成 ──
         const apiUrl = isGitHubToken
